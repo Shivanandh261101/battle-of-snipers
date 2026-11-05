@@ -10,16 +10,13 @@
     <section v-if="!verified" class="standings-card">
       <h3>Verify Your FF UID</h3>
       <p>Enter your registered Free Fire UID to continue.</p>
-
       <form @submit.prevent="verifyUid">
         <input v-model="ffUid" type="text" inputmode="numeric" maxlength="20" placeholder="Enter Free Fire UID" autocomplete="off" required 
         @input="ffUid = ffUid.replace(/[^0-9]/g, '')" />
-
         <button type="submit" :disabled="loading">
           {{ loading ? "VERIFYING..." : "VERIFY & VIEW STANDINGS" }}
         </button>
       </form>
-
       <p v-if="message" class="error-message"> {{ message }} </p>
     </section>
 
@@ -28,13 +25,11 @@
       <div v-if="seasonView === 'dashboard'">
         <button class="page-back-btn" @click="goBack"> ← Back </button>
         <h3>UID Verified Successfully!</h3>
-
         <div class="player-details">
           <p><strong>Player:</strong> {{ playerName }}</p>
           <p><strong>FF UID:</strong> {{ verifiedUid }}</p>
           <p><strong>Team:</strong> {{ teamName }}</p>
         </div>
-      
         <div class="scheduled-matches-section">
           <h2>Scheduled Matches</h2>
           <p v-if="scheduledMatchesLoading"> Loading scheduled matches... </p>
@@ -56,22 +51,17 @@
           </div>
         </div>
 
-        
-<!-- PAST SEASONS BUTTON ON DASHBOARD -->
-<div class="past-seasons-entry">
-  <button
-    type="button"
-    class="past-seasons-button"
-    @click="openSeasonsPage"
-  >
-    <span class="past-seasons-icon">🏆</span>
-    <span>
-      <strong>PAST SEASONS</strong>
-      <small>View completed tournaments</small>
-    </span>
-    <span class="past-seasons-arrow">→</span>
-  </button>
-</div>
+        <!-- PAST SEASONS BUTTON ON DASHBOARD -->
+        <div class="past-seasons-entry">
+          <button type="button" class="past-seasons-button" @click="openSeasonsPage">
+            <span class="past-seasons-icon">🏆</span>
+            <span>
+              <strong>PAST SEASONS</strong>
+              <small>View completed tournaments</small>
+            </span>
+            <span class="past-seasons-arrow">→</span>
+          </button>
+        </div>
         
         <div class="results-placeholder">
           <h3>TOURNAMENT TEAMS</h3>
@@ -152,158 +142,713 @@
           </div>
         </div>
       </div>
+
+      <!-- SEASONS LIST PAGE -->
+      <div v-else-if="seasonView === 'seasons'" class="season-page">
+        <button type="button" class="season-back-button" @click="backToDashboard"> ← Back to Dashboard </button>
+        <h2>🏆 PAST SEASONS</h2>
+        <p class="season-page-subtitle"> Select a completed season to view its results. </p>
+        <p v-if="seasonsLoading">Loading seasons...</p>
+        <p v-else-if="seasonsError" class="error-message"> {{ seasonsError }} </p>
+        <p v-else-if="seasons.length === 0"> No completed seasons available yet. </p>
+        <div v-else class="seasons-grid">
+          <button  v-for="season in seasons" :key="season._id || season.seasonNumber" type="button" class="season-card" @click="openSeason(season.seasonNumber)">
+            <span class="season-card-label">BATTLE OF SNIPERS</span>
+            <strong>{{ season.title }}</strong>
+            <span class="season-card-status">{{ season.status }}</span>
+            <span class="season-card-action">VIEW SEASON →</span>
+          </button>
+        </div>
+      </div>
       
-<!-- SEASONS LIST PAGE -->
-<div v-else-if="seasonView === 'seasons'" class="season-page">
-  <button
-    type="button"
-    class="season-back-button"
-    @click="backToDashboard"
-  >
-    ← Back to Dashboard
-  </button>
-
-  <h2>🏆 PAST SEASONS</h2>
-  <p class="season-page-subtitle">
-    Select a completed season to view its results.
-  </p>
-
-  <p v-if="seasonsLoading">Loading seasons...</p>
-
-  <p v-else-if="seasonsError" class="error-message">
-    {{ seasonsError }}
-  </p>
-
-  <p v-else-if="seasons.length === 0">
-    No completed seasons available yet.
-  </p>
-
-  <div v-else class="seasons-grid">
-    <button
-      v-for="season in seasons"
-      :key="season._id || season.seasonNumber"
-      type="button"
-      class="season-card"
-      @click="openSeason(season.seasonNumber)"
-    >
-      <span class="season-card-label">BATTLE OF SNIPERS</span>
-      <strong>{{ season.title }}</strong>
-      <span class="season-card-status">{{ season.status }}</span>
-      <span class="season-card-action">VIEW SEASON →</span>
-    </button>
-  </div>
-</div>
-
-<!-- SELECTED SEASON DETAILS PAGE -->
-<div v-else-if="seasonView === 'details'" class="season-page">
-  <button
-    type="button"
-    class="season-back-button"
-    @click="backToSeasons"
-  >
-    ← Back to Seasons
-  </button>
-
-<button
+      <!-- SELECTED SEASON DETAILS PAGE -->
+      <div v-else-if="seasonView === 'details'" class="season-page">
+        <button type="button" class="season-back-button" @click="backToSeasons"> ← Back to Seasons </button>
+        <button type="button" class="season-back-button" @click="openSeasonMatches"> Matches → </button>
+        <button
+  v-if="hasPlayoffs(selectedSeason)"
   type="button"
   class="season-back-button"
-  @click="openSeasonMatches"
+  @click="openSeasonPlayoffs"
 >
-  Matches →
+  🏆 Playoffs →
 </button>
+        <template v-if="selectedSeason">
+          <h2>{{ selectedSeason.title }}</h2>
+          <p class="season-page-subtitle">Final Standings</p>
+        </template>
+        <p v-if="seasonDetailsLoading">Loading season details...</p>
+        <p v-else-if="seasonDetailsError" class="error-message"> {{ seasonDetailsError }} </p>
+        <!-- SEASON 5: GRAND FINAL INSTEAD OF STANDINGS -->
+<div
+  v-else-if="selectedSeason && Number(selectedSeason.seasonNumber) === 5"
+  class="season-five-final"
+>
+  <div class="season-five-final-header">
+    <span class="season-five-kicker">BATTLE OF SNIPERS</span>
+    <h3>🏆 GRAND FINAL 🏆</h3>
+    <span class="season-five-format">BO5</span>
+  </div>
 
-  <template v-if="selectedSeason">
-    <h2>{{ selectedSeason.title }}</h2>
-    <p class="season-page-subtitle">Final Standings</p>
-  </template>
+  <div class="season-five-date">
+    TOURNAMENT FINAL
+  </div>
 
-  <p v-if="seasonDetailsLoading">Loading season details...</p>
+  <div class="season-five-team winner">
+    <span>Strange Gaming</span>
+    <strong>3</strong>
+  </div>
 
-  <p v-else-if="seasonDetailsError" class="error-message">
-    {{ seasonDetailsError }}
-  </p>
+  <div class="season-five-team runner-up">
+    <span>MRAK</span>
+    <strong>2</strong>
+  </div>
 
-  <div
-    v-else-if="selectedSeason"
-    class="season-table-scroll"
+  <div class="season-five-champion">
+    <span class="season-five-trophy">♛</span>
+    <span class="season-five-champion-label">
+      BOS SEASON 5 CHAMPION
+    </span>
+    <strong>Strange Gaming</strong>
+    <span class="season-five-runner-up">
+      🥈 Runner-up: MRAK
+    </span>
+  </div>
+</div>
+        <!-- SEASON 4: GROUP A AND GROUP B -->
+<div v-else-if="selectedSeason && [4, 6].includes(Number(selectedSeason.seasonNumber))" class="season-groups-grid">
+  <section
+    v-for="group in getSeasonGroups(selectedSeason)"
+    :key="group.name"
+    class="season-group-table"
   >
+    <h3>GROUP {{ group.name }}</h3>
+
+    <div class="season-table-scroll">
+      <table class="season-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Team</th>
+
+            <th
+              v-for="column in getSeasonColumns(selectedSeason)"
+              :key="column.key"
+            >
+              {{ column.label }}
+            </th>
+
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr
+            v-for="team in group.teams"
+            :key="`${group.name}-${team.rank}`"
+          >
+            <td>{{ team.rank }}</td>
+            <td>{{ team.name }}</td>
+
+            <td
+              v-for="column in getSeasonColumns(selectedSeason)"
+              :key="column.key"
+            >
+              {{ getSeasonStat(team, column.key) }}
+            </td>
+
+            <td>
+              <span
+                v-if="team.status === 'CHAMPION'"
+                class="season-result-badge season-champion"
+              >
+                🏆 CHAMPION
+              </span>
+
+              <span
+                v-else-if="team.status === 'RUNNER-UP'"
+                class="season-result-badge season-runner-up"
+              >
+                🥈 RUNNER-UP
+              </span>
+
+              <span
+                v-else-if="team.status === 'Q'"
+                class="season-qualification-badge season-qualified"
+              >
+                Q
+              </span>
+
+              <span
+                v-else-if="team.status === 'E'"
+                class="season-qualification-badge season-eliminated"
+              >
+                E
+              </span>
+
+              <span
+                v-else-if="Number(team.rank) <= 8"
+                class="season-qualification-badge season-qualified"
+              >
+                Q
+              </span>
+
+              <span
+                v-else
+                class="season-qualification-badge season-eliminated"
+              >
+                E
+              </span>
+            </td>
+          </tr>
+
+          <tr v-if="group.teams.length === 0">
+            <td :colspan="getSeasonColumns(selectedSeason).length + 3">
+              No teams in this group yet.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+        <div v-else-if="selectedSeason" class="season-table-scroll">
+          <table class="season-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Team</th>
+                <th v-for="column in getSeasonColumns(selectedSeason)" :key="column.key"> {{ column.label }} </th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="team in selectedSeason.standings" :key="team.rank">
+                <td>{{ team.rank }}</td>
+                <td>{{ team.name }}</td>
+                <td v-for="column in getSeasonColumns(selectedSeason)" :key="column.key"> {{ getSeasonStat(team, column.key) }} </td>
+                <td>
+                  <span v-if="team.status === 'CHAMPION'" class="season-result-badge season-champion"> 🏆 CHAMPION </span>
+                  <span v-else-if="team.status === 'RUNNER-UP'" class="season-result-badge season-runner-up"> 🥈 RUNNER-UP </span>
+                  <span v-else-if="team.status === 'E'" class="season-qualification-badge season-eliminated"> E </span>
+                  <span v-else-if="selectedSeason.seasonNumber === 4 && team.status === 'Q'" class="season-qualification-badge season-qualified"> Q </span>
+                  <span v-else-if="Number(team.rank) <= 4" class="season-qualification-badge season-qualified"> Q </span>
+                  <span v-else class="season-qualification-badge season-eliminated"> E </span>
+                </td>
+              </tr>
+              <tr v-if="!selectedSeason.standings?.length">
+                <td :colspan="getSeasonColumns(selectedSeason).length + 3"> 
+                  No standings available for this season.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- SEASON 1 AND SEASON 3 PLAYOFF BRACKET -->
+      <div
+        v-if="seasonView === 'playoffs' && selectedSeason?.playoffs"
+        class="playoff-section"
+      >
+        <button
+          type="button"
+          class="season-back-button"
+          @click="backFromPlayoffs"
+        >
+          ← Back to Season Details
+        </button>
+
+        <div class="playoff-heading">
+          <span class="playoff-kicker">BATTLE OF SNIPERS</span>
+          <h2>PLAYOFF BRACKET</h2>
+          <p>{{ selectedSeason.title.toUpperCase() }} · ROAD TO CHAMPION</p>
+        </div>
+
+        <!-- SEASON 1 FORMAT -->
+        <div
+          v-if="selectedSeason.seasonNumber === 1"
+          class="playoff-bracket season-one-bracket"
+        >
+          <div class="semi-finals-column">
+
+            <article
+              v-for="semi in selectedSeason.playoffs.semiFinals"
+              :key="semi.matchNumber"
+              class="playoff-match semi-final-card"
+            >
+              <div class="playoff-card-heading">
+                <span>SEMI-FINAL {{ semi.matchNumber }}</span>
+                <span class="playoff-format">{{ semi.format }}</span>
+              </div>
+
+              <p class="playoff-date">{{ semi.date }}</p>
+
+              <div
+                v-for="teamKey in ['team1', 'team2']"
+                :key="teamKey"
+                class="playoff-team-row"
+                :class="{
+                  'playoff-team-winner': semi.winner === semi[teamKey]
+                }"
+              >
+                <span class="playoff-team-name">{{ semi[teamKey] }}</span>
+
+                <strong class="playoff-score">
+                  {{ semi[teamKey === 'team1' ? 'score1' : 'score2'] }}
+                </strong>
+
+                <span
+                  v-if="semi.winner === semi[teamKey]"
+                  class="playoff-win-mark"
+                >
+                  WIN
+                </span>
+              </div>
+            </article>
+
+          </div>
+
+          <div class="playoff-connectors" aria-hidden="true">
+            <div class="connector-line connector-top"><span>→</span></div>
+            <div class="connector-line connector-bottom"><span>→</span></div>
+          </div>
+
+          <article
+            v-if="selectedSeason.playoffs.grandFinal"
+            class="playoff-match grand-final-card"
+          >
+            <div class="playoff-card-heading grand-final-heading">
+              <span>♛ GRAND FINAL ♛</span>
+              <span class="playoff-format">
+                {{ selectedSeason.playoffs.grandFinal.format }}
+              </span>
+            </div>
+
+            <p class="playoff-date">
+              {{ selectedSeason.playoffs.grandFinal.date }}
+            </p>
+
+            <div
+              v-for="teamKey in ['team1', 'team2']"
+              :key="teamKey"
+              class="final-team-row"
+              :class="{
+                'playoff-team-winner':
+                  selectedSeason.playoffs.grandFinal.winner ===
+                  selectedSeason.playoffs.grandFinal[teamKey]
+              }"
+            >
+              <span>{{ selectedSeason.playoffs.grandFinal[teamKey] }}</span>
+              <strong>
+                {{ selectedSeason.playoffs.grandFinal[
+                  teamKey === 'team1' ? 'score1' : 'score2'
+                ] }}
+              </strong>
+            </div>
+
+            <div class="champion-panel">
+              <span class="champion-trophy">♛</span>
+              <span class="champion-label">
+                {{ selectedSeason.title.toUpperCase() }} CHAMPION
+              </span>
+              <strong>{{ selectedSeason.playoffs.grandFinal.winner }}</strong>
+              <span class="runner-up-label">
+                Runner-up: {{ selectedSeason.playoffs.grandFinal.runnerUp }}
+              </span>
+            </div>
+          </article>
+        </div>
+
+        <!-- SEASON 3 FORMAT -->
+        <div
+          v-else-if="selectedSeason.seasonNumber === 3"
+          class="season-three-bracket"
+        >
+
+          <!-- ROUND 1: SEMI-FINAL 1 AND ELIMINATOR -->
+          <div class="playoff-round-column">
+
+            <article
+              class="playoff-match semi-final-card"
+            >
+              <div class="playoff-card-heading">
+                <span>SEMI-FINAL 1</span>
+                <span class="playoff-format">
+                  {{ selectedSeason.playoffs.semiFinals[0]?.format || 'BO3' }}
+                </span>
+              </div>
+
+              <p class="playoff-date">
+                {{ selectedSeason.playoffs.semiFinals[0]?.date }}
+              </p>
+
+              <div
+                v-for="teamKey in ['team1', 'team2']"
+                :key="teamKey"
+                class="playoff-team-row"
+                :class="{
+                  'playoff-team-winner':
+                    selectedSeason.playoffs.semiFinals[0]?.winner ===
+                    selectedSeason.playoffs.semiFinals[0]?.[teamKey]
+                }"
+              >
+                <span class="playoff-team-name">
+                  {{ selectedSeason.playoffs.semiFinals[0]?.[teamKey] }}
+                </span>
+
+                <strong class="playoff-score">
+                  {{ selectedSeason.playoffs.semiFinals[0]?.[
+                    teamKey === 'team1' ? 'score1' : 'score2'
+                  ] }}
+                </strong>
+
+                <span
+                  v-if="
+                    selectedSeason.playoffs.semiFinals[0]?.winner ===
+                    selectedSeason.playoffs.semiFinals[0]?.[teamKey]
+                  "
+                  class="playoff-win-mark"
+                >
+                  DIRECT TO FINAL
+                </span>
+
+                <span
+                  v-else
+                  class="playoff-win-mark"
+                >
+                  TO SEMI-FINAL 2
+                </span>
+              </div>
+            </article>
+
+            <div class="playoff-flow-label">
+              Semi-Final 1 loser ↓
+            </div>
+
+            <article
+              v-if="selectedSeason.playoffs.eliminator"
+              class="playoff-match semi-final-card eliminator-card"
+            >
+              <div class="playoff-card-heading">
+                <span>ELIMINATOR</span>
+                <span class="playoff-format">
+                  {{ selectedSeason.playoffs.eliminator.format || 'BO1' }}
+                </span>
+              </div>
+
+              <p class="playoff-date">
+                {{ selectedSeason.playoffs.eliminator.date }}
+              </p>
+
+              <div
+                v-for="teamKey in ['team1', 'team2']"
+                :key="teamKey"
+                class="playoff-team-row"
+                :class="{
+                  'playoff-team-winner':
+                    selectedSeason.playoffs.eliminator.winner ===
+                    selectedSeason.playoffs.eliminator[teamKey]
+                }"
+              >
+                <span class="playoff-team-name">
+                  {{ selectedSeason.playoffs.eliminator[teamKey] }}
+                </span>
+
+                <strong class="playoff-score">
+                  {{ selectedSeason.playoffs.eliminator[
+                    teamKey === 'team1' ? 'score1' : 'score2'
+                  ] }}
+                </strong>
+
+                <span
+                  v-if="
+                    selectedSeason.playoffs.eliminator.winner ===
+                    selectedSeason.playoffs.eliminator[teamKey]
+                  "
+                  class="playoff-win-mark"
+                >
+                  TO SEMI-FINAL 2
+                </span>
+              </div>
+            </article>
+
+          </div>
+
+          <!-- ROUND 2: SEMI-FINAL 2 -->
+          <div class="playoff-round-column playoff-round-middle">
+
+            <div class="playoff-flow-label">
+              SF1 loser + Eliminator winner
+            </div>
+
+            <article
+              class="playoff-match semi-final-card"
+            >
+              <div class="playoff-card-heading">
+                <span>SEMI-FINAL 2</span>
+                <span class="playoff-format">
+                  {{ selectedSeason.playoffs.semiFinals[1]?.format || 'BO3' }}
+                </span>
+              </div>
+
+              <p class="playoff-date">
+                {{ selectedSeason.playoffs.semiFinals[1]?.date }}
+              </p>
+
+              <div
+                v-for="teamKey in ['team1', 'team2']"
+                :key="teamKey"
+                class="playoff-team-row"
+                :class="{
+                  'playoff-team-winner':
+                    selectedSeason.playoffs.semiFinals[1]?.winner ===
+                    selectedSeason.playoffs.semiFinals[1]?.[teamKey]
+                }"
+              >
+                <span class="playoff-team-name">
+                  {{ selectedSeason.playoffs.semiFinals[1]?.[teamKey] }}
+                </span>
+
+                <strong class="playoff-score">
+                  {{ selectedSeason.playoffs.semiFinals[1]?.[
+                    teamKey === 'team1' ? 'score1' : 'score2'
+                  ] }}
+                </strong>
+
+                <span
+                  v-if="
+                    selectedSeason.playoffs.semiFinals[1]?.winner ===
+                    selectedSeason.playoffs.semiFinals[1]?.[teamKey]
+                  "
+                  class="playoff-win-mark"
+                >
+                  TO GRAND FINAL
+                </span>
+              </div>
+            </article>
+
+          </div>
+
+          <!-- ROUND 3: GRAND FINAL -->
+          <div class="playoff-round-column playoff-round-final">
+
+            <div class="playoff-flow-label">
+              SF1 winner + SF2 winner
+            </div>
+
+            <article
+              v-if="selectedSeason.playoffs.grandFinal"
+              class="playoff-match grand-final-card"
+            >
+              <div class="playoff-card-heading grand-final-heading">
+                <span>♛ GRAND FINAL ♛</span>
+                <span class="playoff-format">
+                  {{ selectedSeason.playoffs.grandFinal.format || 'BO5' }}
+                </span>
+              </div>
+
+              <p class="playoff-date">
+                {{ selectedSeason.playoffs.grandFinal.date }}
+              </p>
+
+              <div
+                v-for="teamKey in ['team1', 'team2']"
+                :key="teamKey"
+                class="final-team-row"
+                :class="{
+                  'playoff-team-winner':
+                    selectedSeason.playoffs.grandFinal.winner ===
+                    selectedSeason.playoffs.grandFinal[teamKey]
+                }"
+              >
+                <span>
+                  {{ selectedSeason.playoffs.grandFinal[teamKey] }}
+                </span>
+
+                <strong>
+                  {{ selectedSeason.playoffs.grandFinal[
+                    teamKey === 'team1' ? 'score1' : 'score2'
+                  ] }}
+                </strong>
+              </div>
+
+              <div class="champion-panel">
+                <span class="champion-trophy">♛</span>
+                <span class="champion-label">
+                  {{ selectedSeason.title.toUpperCase() }} CHAMPION
+                </span>
+                <strong>
+                  {{ selectedSeason.playoffs.grandFinal.winner }}
+                </strong>
+                <span class="runner-up-label">
+                  Runner-up: {{ selectedSeason.playoffs.grandFinal.runnerUp }}
+                </span>
+              </div>
+            </article>
+
+          </div>
+        </div>
+
+        <!-- DYNAMIC PLAYOFF FORMAT -->
+        <div
+          v-else-if="
+            Array.isArray(selectedSeason.playoffs.rounds) &&
+            selectedSeason.playoffs.rounds.length > 0
+          "
+          class="dynamic-playoff-bracket"
+        >
+          <!-- Automatically render every playoff round -->
+          <div
+            v-for="(round, roundIndex) in selectedSeason.playoffs.rounds"
+            :key="round.name || roundIndex"
+            class="playoff-round-column"
+          >
+            <h3 class="dynamic-round-title">
+              {{ round.name || `ROUND ${roundIndex + 1}` }}
+            </h3>
+
+            <!-- Automatically render every match in this round -->
+            <article
+              v-for="(match, matchIndex) in (round.matches || [])"
+              :key="match._id || matchIndex"
+              class="playoff-match"
+            >
+              <div class="playoff-card-heading">
+                <span>
+                  {{ match.name || round.name || `Match ${matchIndex + 1}` }}
+                </span>
+
+                <span class="playoff-format">
+                  {{ match.format || 'BO3' }}
+                </span>
+              </div>
+
+              <p v-if="match.date" class="playoff-date">
+                {{ match.date }}
+              </p>
+
+              <div
+                v-for="teamKey in ['team1', 'team2']"
+                :key="teamKey"
+                class="playoff-team-row"
+                :class="{
+                  'playoff-team-winner':
+                    match.winner &&
+                    match.winner === match[teamKey]
+                }"
+              >
+                <span class="playoff-team-name">
+                  {{ match[teamKey] || 'TBD' }}
+                </span>
+
+                <strong class="playoff-score">
+                  {{
+                    match[
+                      teamKey === 'team1' ? 'score1' : 'score2'
+                    ] ?? '-'
+                  }}
+                </strong>
+
+                <span
+                  v-if="match.winner && match.winner === match[teamKey]"
+                  class="playoff-win-mark"
+                >
+                  WIN
+                </span>
+              </div>
+              <div
+  v-if="match.nextMatchId"
+  class="playoff-progression"
+>
+  <span class="progression-arrow">↗</span>
+
+  <span>
+    WINNER → {{ match.nextMatchId }}
+    <template v-if="match.nextSlot">
+      · SLOT {{ match.nextSlot }}
+    </template>
+  </span>
+</div>
+            </article>
+          </div>
+        </div>
+      </div>
+      
+      <!-- SEASON MATCHES PAGE -->
+      <div v-if="seasonView === 'matches'" class="season-page">
+        <button type="button" class="season-back-button" @click="backToSeasonDetails"> ← Back to {{ selectedSeason ? selectedSeason.title : "Season 1" }} </button>
+        <h2>{{ selectedSeason ? selectedSeason.title : "Season Matches" }} — Matches</h2>
+        <p class="season-page-subtitle"> All matches from this season. </p>
+        <div v-if="!selectedSeason">
+          <p>Season details are not loaded.</p>
+        </div>
+        <div v-else-if="!selectedSeason.matches || selectedSeason.matches.length === 0">
+          <p>No matches added yet. Match schedules will appear here.</p>
+        </div>
+        <div v-else class="season-matches-list">
+          <div v-for="(match, index) in selectedSeason.matches" :key="match._id || match.matchNumber || index" class="season-match-card">
+            <h3>Match {{ match.matchNumber || index + 1 }}</h3>
+            <p v-if="match.date"><strong>Date:</strong> {{ match.date }}</p>
+            <!-- Seasons with their own match columns -->
+            <!-- SEASON 5: MATCH RESULTS TABLE -->
+<template
+  v-if="Number(selectedSeason.seasonNumber) === 5 && match.results?.length"
+>
+  <div class="table-scroll">
     <table class="season-table">
       <thead>
         <tr>
-          <th>#</th>
+          <th>Rank</th>
           <th>Team</th>
-          <th>Matches</th>
-          <th>Wins</th>
-          <th>Loss</th>
-          <th>Points</th>
-          <th>Damage</th>
+          <th>Kill Points (KP)</th>
         </tr>
       </thead>
 
       <tbody>
         <tr
-          v-for="team in selectedSeason.standings"
-          :key="team.rank"
+          v-for="result in match.results"
+          :key="result.rank + '-' + result.name"
         >
-          <td>{{ team.rank }}</td>
-          <td>{{ team.name }}</td>
-          <td>{{ team.matches }}</td>
-          <td>{{ team.wins }}</td>
-          <td>{{ team.losses }}</td>
-          <td>{{ team.points }}</td>
-          <td>{{ Number(team.damage || 0).toLocaleString('en-IN') }}</td>
-        </tr>
-
-        <tr v-if="!selectedSeason.standings?.length">
-          <td colspan="7">No standings available for this season.</td>
+          <td>{{ result.rank }}</td>
+          <td>{{ result.name }}</td>
+          <td>{{ result.kp }}</td>
         </tr>
       </tbody>
     </table>
   </div>
-</div>
-
-<!-- SEASON MATCHES PAGE -->
-<div v-else-if="seasonView === 'matches'" class="season-page">
-  <button
-    type="button"
-    class="season-back-button"
-    @click="backToSeasonDetails"
-  >
-    ← Back to Season 1
-  </button>
-
-  <h2>{{ selectedSeason ? selectedSeason.title : "Season Matches" }} — Matches</h2>
-
-  <p class="season-page-subtitle">
-    All matches from this season.
-  </p>
-
-  <div v-if="!selectedSeason">
-    <p>Season details are not loaded.</p>
-  </div>
-
-  <div v-else-if="!selectedSeason.matches || selectedSeason.matches.length === 0">
-    <p>No matches added yet. Match schedules will appear here.</p>
-  </div>
-
-  <div v-else class="season-matches-list">
-    <div
-      v-for="(match, index) in selectedSeason.matches"
-      :key="match._id || match.matchNumber || index"
-      class="season-match-card"
-    >
-      <h3>Match {{ match.matchNumber || index + 1 }}</h3>
-      <p v-if="match.date"><strong>Date:</strong> {{ match.date }}</p>
-      <p v-if="match.time"><strong>Time:</strong> {{ match.time }}</p>
-      <p v-if="match.group"><strong>Group:</strong> {{ match.group }}</p>
-      <p v-if="match.teams"><strong>Teams:</strong> {{ match.teams }}</p>
-      <p v-if="match.winner"><strong>Winner: </strong><span class="winner-text">{{ match.winner }}</span></p>
-      <p v-if="match.loser"><strong>Loser: </strong><span class="loser-text">{{ match.loser }}</span></p>
-      <p v-if="match.schedule"><strong>Schedule:</strong> {{ match.schedule }}</p>
-    </div>
-  </div>
-</div>
-
+</template>
+            <template v-else-if="selectedSeason.matchColumns?.length && match.teams?.length && typeof match.teams[0] === 'object'">
+              <p v-if="match.winner"><strong>Winner: </strong><span class="winner-text"> {{ match.winner }} </span></p>
+              <div class="table-scroll">
+                <table class="season-table">
+                  <thead>
+                    <tr>
+                      <th v-for="column in selectedSeason.matchColumns" :key="column.key"> {{ column.label }} </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(team, teamIndex) in match.teams" :key="team.rank || team.teamName || teamIndex">
+                      <td v-for="column in selectedSeason.matchColumns" :key="column.key"> {{ team[column.key] ?? "—" }} </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+      
+            <!-- Keep the existing format for Season 1 and other legacy matches -->
+            <template v-else>
+              <p v-if="match.time"><strong>Time:</strong> {{ match.time }}</p>
+              <p v-if="match.group"><strong>Group:</strong> {{ match.group }}</p>
+              <p v-if="match.match"><strong>Teams: </strong> {{ match.match }}</p>
+              <p v-else-if="match.teams"><strong>Teams: </strong> {{ match.teams }}</p>
+              <p v-if="match.winner"><strong>Winner: </strong><span class="winner-text">{{ match.winner }}</span></p>
+              <p v-if="match.loser"><strong>Loser: </strong><span class="loser-text">{{ match.loser }}</span></p>
+              <p v-if="match.schedule"><strong>Schedule: </strong> {{ match.schedule }}</p>
+            </template>
+          </div>
+        </div>
+      </div>
     </section>
   </div>
 </template>
@@ -345,7 +890,8 @@ export default {
       selectedSeasonNumber: null,
       seasonDetailsLoading: false,
       seasonDetailsError: "",
-      seasonView: "dashboard"
+      seasonView: "dashboard",
+      playoffReturnView: "details"
     };
   },
 
@@ -355,7 +901,69 @@ export default {
     }
   },
 
-  methods: {
+  methods: {  
+    getSeasonColumns(season) {
+      if (season?.standingsColumns?.length) {
+        return season.standingsColumns;
+      }
+      
+      // Fallback for existing seasons such as Season 1
+      return [
+        { key: "matches", label: "Matches" },
+        { key: "wins", label: "Wins" },
+        { key: "losses", label: "Loss" },
+        { key: "points", label: "Points" },
+        { key: "damage", label: "Damage" }
+      ];
+    },
+
+    getSeasonGroups(season) {
+  return ["A", "B"].map(group => ({
+    name: group,
+    teams: (season?.standings || []).filter(
+      team => team.group === group
+    )
+  }));
+},
+
+// NEW FUNCTION: Check whether this season has playoffs
+    hasPlayoffs(season) {
+      if (!season || !season.playoffs) {
+        return false;
+      }
+
+      const playoffs = season.playoffs;
+
+      // Future dynamic playoff format
+      if (Array.isArray(playoffs.rounds)) {
+        return playoffs.rounds.some(
+          round =>
+            Array.isArray(round.matches) &&
+            round.matches.length > 0
+        );
+      }
+
+      // Existing playoff formats
+      return (
+        (Array.isArray(playoffs.semiFinals) &&
+          playoffs.semiFinals.length > 0) ||
+        Boolean(playoffs.eliminator) ||
+        Boolean(playoffs.grandFinal)
+      );
+    },
+
+    getSeasonStat(team, key) {
+      const value = team?.stats?.[key] !== undefined ? team.stats[key] : team?.[key];
+      if (value === undefined || value === null || value === "") {
+        return "—"; 
+      }
+      
+      if (key === "damage") {
+        return Number(value).toLocaleString("en-IN");
+      }
+      return value;
+    },
+
     async loadGroups() {
       this.groupsLoading = true;
       this.groupsError = "";
@@ -414,129 +1022,132 @@ export default {
         this.pointsLoading = false;
       }
     },
-
     
-async loadScheduledMatches() {
-  this.scheduledMatchesLoading = true;
-  this.scheduledMatchesError = "";
-
-  try {
-    const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/scheduled-matches/for-player",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          ffUid: this.verifiedUid
-        }),
-        cache: "no-store"
+    async loadScheduledMatches() {
+      this.scheduledMatchesLoading = true;
+      this.scheduledMatchesError = "";
+      
+      try {
+        const response = await fetch(
+          "https://battle-of-snipers.onrender.com/api/scheduled-matches/for-player",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              ffUid: this.verifiedUid
+            }),
+            cache: "no-store"
+          }
+        );
+        
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            result.message || "Could not load scheduled matches."
+          );
+        }
+        
+        this.scheduledMatches = result.scheduledMatches || [];
+      } catch (error) {
+        this.scheduledMatchesError = error.message || "Unable to load scheduled matches.";
+      } finally {
+        this.scheduledMatchesLoading = false;
       }
-    );
+    },
+    
+    async loadSeasons() {
+      this.seasonsLoading = true;
+      this.seasonsError = "";
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/seasons`, {
+          cache: "no-store"
+        });
+        
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || "Could not load seasons.");
+        }
+        this.seasons = result.seasons || [];
+      } catch (error) {
+        this.seasonsError = error.message || "Unable to load seasons.";
+      } finally {
+        this.seasonsLoading = false;
+      }
+    },
+    
+    async openSeason(seasonNumber) {
+      this.selectedSeasonNumber = seasonNumber;
+      this.seasonView = "details";
+      this.selectedSeason = null;
+      this.seasonDetailsLoading = true;
+      this.seasonDetailsError = "";
 
-    const result = await response.json();
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/seasons/${seasonNumber}`,
+          { cache: "no-store" }
+        );
+        
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || "Could not load season.");
+        }
+        this.selectedSeason = result.season;
+      } catch (error) {
+        this.seasonDetailsError = error.message || "Unable to load season details.";
+      } finally {
+        this.seasonDetailsLoading = false;
+      }
+    },
+    
+    openSeasonsPage() {
+      this.selectedSeason = null;
+      this.selectedSeasonNumber = null;
+      this.seasonView = "seasons";
 
-    if (!response.ok) {
-      throw new Error(
-        result.message || "Could not load scheduled matches."
-      );
-    }
+      if (this.seasons.length === 0) {
+        this.loadSeasons();
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    
+    backToDashboard() {
+      this.seasonView = "dashboard";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    
+    backToSeasons() {
+      this.selectedSeason = null;
+      this.selectedSeasonNumber = null;
+      this.seasonView = "seasons";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    
+    openSeasonMatches() {
+      this.seasonView = "matches";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    
+    backToSeasonDetails() {
+      this.seasonView = "details";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
 
-    this.scheduledMatches = result.scheduledMatches || [];
-  } catch (error) {
-    this.scheduledMatchesError =
-      error.message || "Unable to load scheduled matches.";
-  } finally {
-    this.scheduledMatchesLoading = false;
+    openSeasonPlayoffs() {
+  if (!this.selectedSeason?.playoffs) {
+    return;
   }
-},
 
-
-async loadSeasons() {
-  this.seasonsLoading = true;
-  this.seasonsError = "";
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/seasons`, {
-      cache: "no-store"
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Could not load seasons.");
-    }
-
-    this.seasons = result.seasons || [];
-  } catch (error) {
-    this.seasonsError = error.message || "Unable to load seasons.";
-  } finally {
-    this.seasonsLoading = false;
-  }
-},
-
-async openSeason(seasonNumber) {
-  this.selectedSeasonNumber = seasonNumber;
-  this.seasonView = "details";
-  this.selectedSeason = null;
-  this.seasonDetailsLoading = true;
-  this.seasonDetailsError = "";
-
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/seasons/${seasonNumber}`,
-      { cache: "no-store" }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Could not load season.");
-    }
-
-    this.selectedSeason = result.season;
-  } catch (error) {
-    this.seasonDetailsError =
-      error.message || "Unable to load season details.";
-  } finally {
-    this.seasonDetailsLoading = false;
-  }
-},
-
-
-openSeasonsPage() {
-  this.selectedSeason = null;
-  this.selectedSeasonNumber = null;
-  this.seasonView = "seasons";
-
-  if (this.seasons.length === 0) {
-    this.loadSeasons();
-  }
-
+  this.playoffReturnView = this.seasonView;
+  this.seasonView = "playoffs";
   window.scrollTo({ top: 0, behavior: "smooth" });
 },
 
-backToDashboard() {
-  this.seasonView = "dashboard";
-  window.scrollTo({ top: 0, behavior: "smooth" });
-},
-
-backToSeasons() {
-  this.selectedSeason = null;
-  this.selectedSeasonNumber = null;
-  this.seasonView = "seasons";
-  window.scrollTo({ top: 0, behavior: "smooth" });
-},
-
-
-openSeasonMatches() {
-  this.seasonView = "matches";
-  window.scrollTo({ top: 0, behavior: "smooth" });
-},
-
-backToSeasonDetails() {
-  this.seasonView = "details";
+backFromPlayoffs() {
+  this.seasonView = this.playoffReturnView || "details";
   window.scrollTo({ top: 0, behavior: "smooth" });
 },
 
@@ -1243,6 +1854,592 @@ backToSeasonDetails() {
 .loser-text {
   color: #ef4444;
   font-weight: 700;
+}
+
+
+/* BOS Season 1 - Esports Playoff Bracket */
+.playoff-section {
+  margin-top: 34px;
+  padding: 24px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 80% 0%, #39200d 0%, transparent 45%),
+    linear-gradient(145deg, #151116, #09090d 72%);
+  border: 1px solid #75401f;
+  border-radius: 16px;
+  box-shadow: 0 0 24px #ff6b1512;
+}
+
+.playoff-heading {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.playoff-kicker {
+  color: #ff9e37;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+
+.playoff-heading h2 {
+  margin: 8px 0;
+  color: #ffbf47;
+  font-size: clamp(25px, 4vw, 38px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-shadow: 0 0 18px #ff780744;
+}
+
+.playoff-heading p {
+  color: #aaa5ad;
+  font-size: 11px;
+  letter-spacing: 3px;
+}
+
+.playoff-bracket {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+}
+
+.semi-finals-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 24px;
+  min-width: 0;
+}
+
+.playoff-match {
+  min-width: 0;
+  padding: 16px;
+  background: linear-gradient(145deg, #20171a, #101014);
+  border: 1px solid #663b2b;
+  border-radius: 12px;
+}
+
+.playoff-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  color: #ffb13b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.playoff-format {
+  padding: 4px 7px;
+  color: #ffd58a;
+  background: #432711;
+  border: 1px solid #82501e;
+  border-radius: 5px;
+  font-size: 10px;
+}
+
+.playoff-date {
+  margin: 10px 0;
+  color: #aaa5ad;
+  font-size: 12px;
+}
+
+.playoff-team-row,
+.final-team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 11px 9px;
+  color: #eeeaf0;
+  background: #0b0b0f;
+  border: 1px solid #343039;
+  border-radius: 7px;
+}
+
+.playoff-team-name,
+.final-team-row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.playoff-score,
+.final-team-row strong {
+  color: #f5f0e7;
+  font-size: 22px;
+}
+
+.playoff-team-winner {
+  background: linear-gradient(100deg, #422a0b, #21180d) !important;
+  border-color: #d99b31 !important;
+}
+
+.playoff-team-winner .playoff-score,
+.final-team-row.playoff-team-winner strong {
+  color: #ffca55;
+}
+
+.playoff-win-mark {
+  color: #ffc34d;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.playoff-connectors {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.connector-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffbd45;
+  font-size: 30px;
+  text-shadow: 0 0 12px #ff8b28;
+}
+
+.connector-line span {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.grand-final-card {
+  align-self: center;
+  border-color: #c18a2c;
+  box-shadow: 0 0 24px #ffb52c12;
+}
+
+.grand-final-heading {
+  color: #ffd16c;
+}
+
+.champion-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 18px 8px;
+  text-align: center;
+  background: radial-gradient(ellipse, #4a300d, #17120b 72%);
+  border: 1px solid #b8872e;
+  border-radius: 10px;
+}
+
+.champion-trophy {
+  color: #ffd05c;
+  font-size: 32px;
+}
+
+.champion-label {
+  color: #ffca55;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.champion-panel strong {
+  color: #fff0c4;
+  font-size: clamp(17px, 2vw, 24px);
+  overflow-wrap: anywhere;
+}
+
+.runner-up-label {
+  color: #aaa5ad;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .playoff-section {
+    padding: 14px;
+  }
+
+  .playoff-bracket {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .semi-finals-column {
+    gap: 14px;
+  }
+
+  .playoff-connectors {
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 4px 0;
+  }
+
+  .connector-line {
+    font-size: 24px;
+  }
+
+  .grand-final-card {
+    width: auto;
+  }
+}
+
+/* Season standings: qualification status */
+.season-team-cell {
+  white-space: nowrap;
+}
+
+.season-qualification-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 25px;
+  margin-left: 10px;
+  padding: 4px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.season-qualified {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.45);
+}
+
+.season-eliminated {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+/* Add spacing between Season navigation buttons */
+.season-page > .season-back-button {
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+/* Season champion and runner-up badges */
+
+.season-result-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.season-champion {
+  color: #ffca55;
+  background: rgba(255, 176, 0, 0.14);
+  border: 1px solid rgba(255, 176, 0, 0.5);
+}
+
+.season-runner-up {
+  color: #d1d5db;
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+
+.playoff-bracket {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.semi-finals-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 24px;
+  min-width: 0;
+  width: 100%;
+}
+
+.playoff-match {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 16px;
+  overflow-wrap: normal;
+}
+
+.playoff-team-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* SEASON 3 PLAYOFF BRACKET */
+.season-three-bracket {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  width: 100%;
+}
+
+.playoff-round-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+  min-width: 0;
+}
+
+.playoff-round-middle {
+  padding-top: 70px;
+}
+
+.playoff-round-final {
+  padding-top: 35px;
+}
+
+.playoff-flow-label {
+  color: #f5c451;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.season-three-bracket .playoff-match {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .season-three-bracket {
+    grid-template-columns: 1fr;
+  }
+
+  .playoff-round-middle,
+  .playoff-round-final {
+    padding-top: 0;
+  }
+
+  .playoff-round-column {
+    gap: 14px;
+  }
+}
+
+/* SEASON 5 GRAND FINAL CARD */
+.season-five-final {
+  width: 100%;
+  max-width: 520px;
+  box-sizing: border-box;
+  margin: 30px auto;
+  padding: 28px;
+  overflow: hidden;
+  text-align: center;
+  color: #fff;
+  background:
+    radial-gradient(ellipse at 50% 0%, #4a2a0b 0%, transparent 65%),
+    linear-gradient(145deg, #1b1512, #0c0c11 75%);
+  border: 1px solid #b87920;
+  border-radius: 16px;
+  box-shadow: 0 0 25px rgba(255, 176, 0, 0.09);
+}
+
+.season-five-final-header {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.season-five-kicker {
+  display: block;
+  color: #ffbd4a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 3px;
+}
+
+.season-five-final-header h3 {
+  margin: 12px 0;
+  color: #ffd166;
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.season-five-format {
+  display: inline-block;
+  padding: 6px 13px;
+  color: #ffdc98;
+  background: #432711;
+  border: 1px solid #8d5721;
+  border-radius: 7px;
+  font-weight: 800;
+}
+
+.season-five-date {
+  margin-bottom: 18px;
+  color: #c5c5cf;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.season-five-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 17px;
+  background: #101014;
+  border: 1px solid #38333a;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.season-five-team span {
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.season-five-team strong {
+  flex-shrink: 0;
+  font-size: 28px;
+}
+
+.season-five-team.winner {
+  color: #ffcf65;
+  background: linear-gradient(110deg, #3b290d, #1b160e);
+  border-color: #d79a22;
+}
+
+.season-five-team.runner-up strong {
+  color: #e8e8ee;
+}
+
+.season-five-champion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 26px 15px;
+  background: radial-gradient(ellipse at center, #35240b, #15110c 75%);
+  border: 1px solid #a8741a;
+  border-radius: 12px;
+}
+
+.season-five-trophy {
+  color: #ffd166;
+  font-size: 48px;
+}
+
+.season-five-champion-label {
+  color: #ffcf65;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 3px;
+}
+
+.season-five-champion > strong {
+  color: #fff0c2;
+  font-size: 27px;
+  overflow-wrap: anywhere;
+}
+
+.season-five-runner-up {
+  color: #c5c5cf;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .season-five-final {
+    padding: 20px 14px;
+  }
+
+  .season-five-final-header h3 {
+    font-size: 22px;
+  }
+
+  .season-five-team {
+    padding: 14px;
+  }
+
+  .season-five-team span {
+    font-size: 15px;
+  }
+
+  .season-five-champion > strong {
+    font-size: 23px;
+  }
+}
+
+/* Dynamic playoff bracket for all seasons */
+.dynamic-playoff-bracket {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 260px), 1fr)
+  );
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dynamic-round-title {
+  margin: 0 0 8px;
+  color: #ffd166;
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.dynamic-playoff-bracket .playoff-round-column {
+  min-width: 0;
+  width: 100%;
+}
+
+.dynamic-playoff-bracket .playoff-match {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .dynamic-playoff-bracket {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+}
+
+.playoff-progression {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #49351f;
+  color: #ffc34d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.progression-arrow {
+  font-size: 20px;
+  line-height: 1;
+  color: #ffbd45;
+  text-shadow: 0 0 10px #ff8b28;
 }
 
 </style>

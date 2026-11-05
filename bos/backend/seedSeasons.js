@@ -6,15 +6,16 @@ const season1 = {
   seasonNumber: 1,
   title: "BOS Season 1",
   status: "Completed",
+  
   standings: [
-    { rank: 1, name: "Night Hunters", matches: 7, wins: 6, losses: 1, points: 12, damage: 40348 },
-    { rank: 2, name: "Ans Gaming", matches: 7, wins: 5, losses: 2, points: 10, damage: 48211 },
-    { rank: 3, name: "Toxic Gamers", matches: 7, wins: 4, losses: 3, points: 8, damage: 45609 },
-    { rank: 4, name: "Aryan Gaming", matches: 7, wins: 4, losses: 3, points: 8, damage: 39428 },
-    { rank: 5, name: "FF Gamers", matches: 7, wins: 4, losses: 3, points: 8, damage: 35190 },
-    { rank: 6, name: "Titans Club", matches: 7, wins: 2, losses: 5, points: 4, damage: 33704 },
-    { rank: 7, name: "Dark Hunters", matches: 7, wins: 2, losses: 5, points: 4, damage: 27384 },
-    { rank: 8, name: "Team United", matches: 7, wins: 1, losses: 6, points: 2, damage: 28915 }
+    { rank: 1, name: "Night Hunters", matches: 7, wins: 6, losses: 1, points: 12, damage: 40348, status: "Q" },
+    { rank: 2, name: "Ans Gaming", matches: 7, wins: 5, losses: 2, points: 10, damage: 48211, status: "Q" },
+    { rank: 3, name: "Toxic Gamers", matches: 7, wins: 5, losses: 2, points: 10, damage: 45609, status: "Q" },
+    { rank: 4, name: "Aryan Gaming", matches: 7, wins: 4, losses: 3, points: 8, damage: 39428, status: "Q" },
+    { rank: 5, name: "FF Gamers", matches: 7, wins: 3, losses: 4, points: 6, damage: 35190, status: "E" },
+    { rank: 6, name: "Titans Club", matches: 7, wins: 2, losses: 5, points: 4, damage: 33704, status: "E" },
+    { rank: 7, name: "Dark Hunters", matches: 7, wins: 2, losses: 5, points: 4, damage: 27384, status: "E" },
+    { rank: 8, name: "Team United", matches: 7, wins: 1, losses: 6, points: 2, damage: 28915, status: "E" }
   ],
   matches: []
 };
@@ -28,10 +29,20 @@ async function seedSeason() {
     await mongoose.connect(process.env.MONGO_URI);
 
     await Season.findOneAndUpdate(
-      { seasonNumber: 1 },
-      { $set: season1 },
-      { upsert: true, new: true, runValidators: true }
-    );
+  { seasonNumber: 1 },
+  {
+    $set: {
+      title: season1.title,
+      status: season1.status,
+      standings: season1.standings
+    },
+    $setOnInsert: {
+      seasonNumber: season1.seasonNumber,
+      matches: []
+    }
+  },
+  { upsert: true, new: true, runValidators: true }
+);
 
     console.log("BOS Season 1 saved successfully.");
   } catch (error) {
