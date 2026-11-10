@@ -113,7 +113,7 @@ mongoose
       const player = await Registration.findOne({
         ffUid: ffUid.trim()
       })
-      .select("ffUid ffName teamName")
+      .select("ffUid ffName teamName group")
       .lean();
       
       if (!player) {
@@ -127,7 +127,8 @@ mongoose
         verified: true,
         ffUid: player.ffUid,
         ffName: player.ffName,
-        teamName: player.teamName
+        teamName: player.teamName,
+        group: player.group || null
       });
     } catch (error) {
       console.error("FF UID verification error:", error.message);
@@ -904,6 +905,82 @@ const ROUND_POINTS = {
   7: 3
 };
 
+// Conservative qualification check using possible remaining points.
+function getQualificationStatus(team, teams, qualifiersPerGroup, maxMatches) {
+  if (
+    !Number.isInteger(qualifiersPerGroup) ||
+    qualifiersPerGroup < 1 ||
+    !Number.isInteger(maxMatches) ||
+    maxMatches < 1
+  ) {
+    return null;
+  }
+
+  const remaining = Math.max(0, maxMatches - team.played);
+
+  // Candidate's worst and best possible final scores.
+  const candidateMin = {
+    total: team.totalPoints,
+    rounds: team.roundsPoints - (remaining * 10)
+  };
+
+  const candidateMax = {
+    total: team.totalPoints + (remaining * 4),
+    rounds: team.roundsPoints + (remaining * 10)
+  };
+
+  let possibleRivals = 0;
+  let guaranteedRivalsAhead = 0;
+
+  for (const rival of teams) {
+    if (rival._id.toString() === team._id.toString()) continue;
+
+    const rivalRemaining = Math.max(0, maxMatches - rival.played);
+
+    const rivalMax = {
+      total: rival.totalPoints + (rivalRemaining * 4),
+      rounds: rival.roundsPoints + (rivalRemaining * 10)
+    };
+
+    const rivalMin = {
+      total: rival.totalPoints,
+      rounds: rival.roundsPoints - (rivalRemaining * 10)
+    };
+
+    // Could this rival finish ahead of or level with this team?
+    if (
+      rivalMax.total > candidateMin.total ||
+      (
+        rivalMax.total === candidateMin.total &&
+        rivalMax.rounds >= candidateMin.rounds
+      )
+    ) {
+      possibleRivals++;
+    }
+
+    // Is this rival guaranteed to finish strictly ahead?
+    if (
+      rivalMin.total > candidateMax.total ||
+      (
+        rivalMin.total === candidateMax.total &&
+        rivalMin.rounds > candidateMax.rounds
+      )
+    ) {
+      guaranteedRivalsAhead++;
+    }
+  }
+
+  if (possibleRivals < qualifiersPerGroup) {
+    return "Q";
+  }
+
+  if (guaranteedRivalsAhead >= qualifiersPerGroup) {
+    return "E";
+  }
+
+  return null;
+}
+
 // ADMIN: Save a match result
 app.post("/api/admin/standings/match", verifyAdmin, async (req, res) => {
   try {
@@ -1201,9 +1278,23 @@ app.get("/api/standings/points", async (req, res) => {
           totalPoints: score?.totalPoints || 0
         };
       })
-      .sort((a, b) => b.totalPoints - a.totalPoints || b.roundsPoints - a.roundsPoints).map((team, index) => ({
-        ...team, qualificationStatus: Number.isInteger(qualifiersPerGroup) && qualifiersPerGroup >= 1 ? index < qualifiersPerGroup ? "Q" : "E" : null
-      }));
+      .sort((a, b) =>
+  b.totalPoints - a.totalPoints ||
+  b.roundsPoints - a.roundsPoints
+)
+.map(team => ({
+  ...team,
+  qualificationStatus:
+    settings?.tournamentStarted &&
+    groups[group].some(row => row.played > 0)
+      ? getQualificationStatus(
+          team,
+          groups[group],
+          qualifiersPerGroup,
+          settings?.groupAMatches
+        )
+      : null
+}));
     }
 
     return res.json({ groups });

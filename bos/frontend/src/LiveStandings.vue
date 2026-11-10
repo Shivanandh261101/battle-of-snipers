@@ -3,7 +3,7 @@
     <header>
       <h1>BATTLE OF SNIPERS</h1>
       <h2>SEASON 7</h2>
-      <p>{{ verified ? "LIVE TOURNAMENT STANDINGS" : "PLAYER VERIFICATION" }}</p>
+      <p :class="{ 'verified-subtitle': verified }"> {{ verified ? "LIVE TOURNAMENT STANDINGS" : "PLAYER VERIFICATION" }} </p>
     </header>
 
     <!-- Step 1: Verify FF UID -->
@@ -23,13 +23,20 @@
     <!-- Step 2: Show only after successful verification -->
     <section v-else class="standings-card">
       <div v-if="seasonView === 'dashboard'">
-        <button class="page-back-btn" @click="goBack"> ← Back </button>
-        <h3>UID Verified Successfully!</h3>
+        <h3 class="verified-success-title">UID Verified Successfully!</h3>
         <div class="player-details">
-          <p><strong>Player:</strong> {{ playerName }}</p>
-          <p><strong>FF UID:</strong> {{ verifiedUid }}</p>
-          <p><strong>Team:</strong> {{ teamName }}</p>
-        </div>
+  <div class="player-info-row">
+    <p><strong>Player:</strong> {{ playerName }}</p>
+    <button class="page-back-btn" @click="goBack"> Back </button>
+  </div>
+
+  <p><strong>FF UID:</strong> {{ verifiedUid }}</p>
+  <p><strong>Team:</strong> {{ teamName }}</p>
+  <p>
+    <strong>Group:</strong>
+    {{ playerGroup ? `GROUP ${playerGroup}` : "NOT ASSIGNED YET" }}
+  </p>
+</div>
         <div class="scheduled-matches-section">
           <h2>Scheduled Matches</h2>
           <p v-if="scheduledMatchesLoading"> Loading scheduled matches... </p>
@@ -63,39 +70,14 @@
           </button>
         </div>
         
-        <div class="results-placeholder">
-          <h3>TOURNAMENT TEAMS</h3>
-          <p v-if="groupsLoading">Loading teams...</p>
-          <p v-if="groupsError" class="error-message"> {{ groupsError }} </p>
-          <div class="groups-container">
-            <div class="group-card">
-              <h4>GROUP A</h4>
-              <div v-if="groups.A.length === 0 && !groupsLoading"> 
-                No teams assigned yet. 
-              </div>
-              <div v-for="(team, index) in groups.A" :key="team._id" class="team-row">
-                <span class="team-number">{{ index + 1 }}.</span>
-                <img v-if="team.teamLogo" :src="team.teamLogo" :alt="team.teamName + ' logo'" class="team-logo"/>
-                <span>{{ team.teamName }}</span>
-              </div>
-            </div>
-            <div class="group-card">
-              <h4>GROUP B</h4>
-              <div v-if="groups.B.length === 0 && !groupsLoading">
-                No teams assigned yet.
-              </div>
-              <div v-for="(team, index) in groups.B" :key="team._id" class="team-row">
-                <span class="team-number">{{ index + 1 }}.</span>
-                <img v-if="team.teamLogo" :src="team.teamLogo" :alt="team.teamName + ' logo'" class="team-logo"/>
-                <span>{{ team.teamName }}</span>
-              </div>
-            </div>
-          </div>
+        <div class="player-group-assignment">
+          <p class="group-assignment-label">YOUR TEAM GROUP</p>
+          <h2 v-if="playerGroup"> YOU ARE ASSIGNED TO <span>GROUP {{ playerGroup }}</span> </h2>
+          <h2 v-else> GROUP NOT ASSIGNED YET </h2>
         </div>
-        
+
         <div class="points-section">
           <h3>LIVE POINTS TABLE</h3>
-          <p v-if="pointsLoading">Updating points...</p>
           <p v-if="pointsError" class="error-message"> {{ pointsError }} </p>
           <div v-for="groupName in ['A', 'B']" :key="groupName" class="points-group">
             <h4>GROUP {{ groupName }}</h4>
@@ -145,7 +127,7 @@
 
       <!-- SEASONS LIST PAGE -->
       <div v-else-if="seasonView === 'seasons'" class="season-page">
-        <button type="button" class="season-back-button" @click="backToDashboard"> ← Back to Dashboard </button>
+        <button type="button" class="season-back-button" @click="backToDashboard"> Back </button>
         <h2>🏆 PAST SEASONS</h2>
         <p class="season-page-subtitle"> Select a completed season to view its results. </p>
         <p v-if="seasonsLoading">Loading seasons...</p>
@@ -163,15 +145,15 @@
       
       <!-- SELECTED SEASON DETAILS PAGE -->
       <div v-else-if="seasonView === 'details'" class="season-page">
-        <button type="button" class="season-back-button" @click="backToSeasons"> ← Back to Seasons </button>
-        <button type="button" class="season-back-button" @click="openSeasonMatches"> Matches → </button>
+        <button type="button" class="season-back-button" @click="backToSeasons"> Back </button>
+        <button type="button" class="season-back-button" @click="openSeasonMatches"> Matches </button>
         <button
   v-if="hasPlayoffs(selectedSeason)"
   type="button"
   class="season-back-button"
   @click="openSeasonPlayoffs"
 >
-  🏆 Playoffs →
+  🏆 Playoffs 
 </button>
         <template v-if="selectedSeason">
           <h2>{{ selectedSeason.title }}</h2>
@@ -347,17 +329,8 @@
       </div>
       
       <!-- SEASON 1 AND SEASON 3 PLAYOFF BRACKET -->
-      <div
-        v-if="seasonView === 'playoffs' && selectedSeason?.playoffs"
-        class="playoff-section"
-      >
-        <button
-          type="button"
-          class="season-back-button"
-          @click="backFromPlayoffs"
-        >
-          ← Back to Season Details
-        </button>
+      <div v-if="seasonView === 'playoffs' && selectedSeason?.playoffs" class="playoff-section">
+        <button type="button" class="season-back-button" @click="backFromPlayoffs"> Back </button>
 
         <div class="playoff-heading">
           <span class="playoff-kicker">BATTLE OF SNIPERS</span>
@@ -777,17 +750,31 @@
       
       <!-- SEASON MATCHES PAGE -->
       <div v-if="seasonView === 'matches'" class="season-page">
-        <button type="button" class="season-back-button" @click="backToSeasonDetails"> ← Back to {{ selectedSeason ? selectedSeason.title : "Season 1" }} </button>
+        <div class="matches-header-actions">
+          <button type="button" class="season-back-button" @click="backToSeasonDetails"> Back </button>
+          <div class="match-search-box">
+            <input type="text" v-model="matchSearchQuery" placeholder="Search team or date..." class="match-search-input"/>
+          </div>
+        </div>
         <h2>{{ selectedSeason ? selectedSeason.title : "Season Matches" }} — Matches</h2>
-        <p class="season-page-subtitle"> All matches from this season. </p>
+
+<p class="match-search-count" v-if="matchSearchQuery">
+  Showing {{ filteredSeasonMatches.length }}
+  of {{ selectedSeason.matches.length }} matches
+</p>
         <div v-if="!selectedSeason">
           <p>Season details are not loaded.</p>
         </div>
-        <div v-else-if="!selectedSeason.matches || selectedSeason.matches.length === 0">
-          <p>No matches added yet. Match schedules will appear here.</p>
-        </div>
+        <div v-else-if="filteredSeasonMatches.length === 0">
+  <p>
+    {{ matchSearchQuery
+      ? "No matching matches found."
+      : "No matches added yet. Match schedules will appear here."
+    }}
+  </p>
+</div>
         <div v-else class="season-matches-list">
-          <div v-for="(match, index) in selectedSeason.matches" :key="match._id || match.matchNumber || index" class="season-match-card">
+          <div v-for="(match, index) in filteredSeasonMatches" :key="match._id || match.matchNumber || index" class="season-match-card">
             <h3>Match {{ match.matchNumber || index + 1 }}</h3>
             <p v-if="match.date"><strong>Date:</strong> {{ match.date }}</p>
             <!-- Seasons with their own match columns -->
@@ -854,7 +841,7 @@
 </template>
 
 <script>
-const API_BASE_URL = "https://battle-of-snipers.onrender.com";
+const API_BASE_URL = "http://localhost:5000";
 export default {
   name: "LiveStandings",
 
@@ -867,6 +854,7 @@ export default {
       verifiedUid: "",
       playerName: "",
       teamName: "",
+      playerGroup: null,
       groups: {
         A: [],
         B: []
@@ -891,7 +879,8 @@ export default {
       seasonDetailsLoading: false,
       seasonDetailsError: "",
       seasonView: "dashboard",
-      playoffReturnView: "details"
+      playoffReturnView: "details",
+      matchSearchQuery: ""
     };
   },
 
@@ -900,6 +889,79 @@ export default {
       clearInterval(this.pointsInterval);
     }
   },
+
+  computed: {
+  filteredSeasonMatches() {
+    if (!this.selectedSeason?.matches) {
+      return [];
+    }
+
+    const query = this.matchSearchQuery
+      .trim()
+      .toLowerCase();
+
+    if (!query) {
+      return this.selectedSeason.matches;
+    }
+
+    return this.selectedSeason.matches.filter(
+      (match, index) => {
+
+        // Match number
+        const matchNumber = String(
+          match.matchNumber || index + 1
+        );
+
+        // Match date
+        const matchDate = String(
+          match.date || ""
+        );
+
+        // Legacy team names
+        let teamNames = "";
+
+        if (typeof match.match === "string") {
+          teamNames += " " + match.match;
+        }
+
+        if (typeof match.teams === "string") {
+          teamNames += " " + match.teams;
+        }
+
+        // Object-based team data
+        if (Array.isArray(match.teams)) {
+          teamNames += " " + match.teams
+            .map(team =>
+              typeof team === "string"
+                ? team
+                : team.teamName || team.name || ""
+            )
+            .join(" ");
+        }
+
+        // Season 5 results
+        if (Array.isArray(match.results)) {
+          teamNames += " " + match.results
+            .map(result => result.name || "")
+            .join(" ");
+        }
+
+        const searchableText = [
+          matchNumber,
+          matchDate,
+          teamNames,
+          match.winner || "",
+          match.loser || "",
+          match.group || ""
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return searchableText.includes(query);
+      }
+    );
+  }
+},
 
   methods: {  
     getSeasonColumns(season) {
@@ -970,7 +1032,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/standings/teams",
+          "http://localhost:5000/api/standings/teams",
           {
             cache: "no-store"
           }
@@ -1000,7 +1062,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/standings/points",
+          "http://localhost:5000/api/standings/points",
           { cache: "no-store" }
         );
         
@@ -1029,7 +1091,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/scheduled-matches/for-player",
+          "http://localhost:5000/api/scheduled-matches/for-player",
           {
             method: "POST",
             headers: {
@@ -1160,7 +1222,7 @@ backFromPlayoffs() {
 
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/verify-ff-uid",
+          "http://localhost:5000/api/verify-ff-uid",
           {
             method: "POST",
             headers: {
@@ -1183,8 +1245,8 @@ backFromPlayoffs() {
         this.verifiedUid = result.ffUid;
         this.playerName = result.ffName;
         this.teamName = result.teamName;
+        this.playerGroup = result.group || null;
         this.verified = true;
-        this.loadGroups();
         this.loadPointsTable();
         this.loadScheduledMatches();
         this.loadSeasons();
@@ -1217,6 +1279,7 @@ backFromPlayoffs() {
       this.verifiedUid = "";
       this.playerName = "";
       this.teamName = "";
+      this.playerGroup = null;
       this.scheduledMatches = [];
       this.scheduledMatchesLoading = false;
       this.scheduledMatchesError = "";
@@ -1475,15 +1538,58 @@ backFromPlayoffs() {
 }
 
 @media (max-width: 600px) {
-  .page-back-btn {
-    top: 10px;
-    right: 0;
-    padding: 10px 12px !important;
-    font-size: 13px;
+  .standings-page {
+    padding-top: 0 !important;
   }
 
   .standings-page header {
-    padding-top: 55px;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  .standings-page header h1 {
+    margin-top: 2;
+  }
+
+  .player-details {
+    display: block;
+  }
+
+  .player-info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .player-details p {
+    margin: 6px 0 !important;
+    line-height: 1.3;
+  }
+
+  .player-info-row p {
+    flex: 1;
+    min-width: 0;
+    margin: 6px 0 !important;
+    line-height: 1.3;
+  }
+
+  .player-info-row .page-back-btn {
+    position: static !important;
+    flex-shrink: 0;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 7px 10px !important;
+    font-size: 12px;
+  }
+
+  .player-group-assignment {
+    display: none;
+  }
+
+  .verified-subtitle,
+  .verified-success-title {
+    display: none;
   }
 }
 
@@ -2440,6 +2546,319 @@ backFromPlayoffs() {
   line-height: 1;
   color: #ffbd45;
   text-shadow: 0 0 10px #ff8b28;
+}
+
+.matches-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.match-search-box {
+  width: 300px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  font-size: 20px;
+}
+
+.match-search-box .match-search-input {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 12px 15px;
+  background: #111217;
+  border: 1px solid #383844;
+  border-radius: 10px;
+  color: white;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.match-search-input::placeholder {
+  color: #888;
+}
+
+.match-search-count {
+  text-align: left;
+  color: #ffb000;
+  font-size: 13px;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 600px) {
+  .matches-header-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .matches-header-actions .season-back-button {
+    flex: 0 0 auto;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 10px 12px !important;
+    white-space: nowrap;
+  }
+
+  .match-search-box {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    max-width: none;
+  }
+
+  .match-search-box .match-search-input {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+}
+
+.player-group-assignment {
+  margin: 28px 0;
+  padding: 30px 20px;
+  text-align: center;
+  border: 1px solid rgba(255, 176, 0, 0.45);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #191922, #101015);
+}
+
+.group-assignment-label {
+  color: #aaa;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.player-group-assignment h2 {
+  color: #fff;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.player-group-assignment h2 span {
+  color: #ffb000;
+}
+
+.player-group-assignment p {
+  color: #aaa;
+  line-height: 1.6;
+}
+
+.player-group-assignment strong {
+  color: #fff;
+}
+
+/* MOBILE LIVE STANDINGS - REAL TABLE */
+@media (max-width: 600px) {
+
+  .standings-page {
+    padding: 10px 5px;
+    box-sizing: border-box;
+  }
+
+  .standings-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px 6px;
+    box-sizing: border-box;
+  }
+
+  .points-section {
+    width: 100%;
+    padding: 10px 3px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .points-group {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .points-section .table-scroll {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .points-section .table-scroll table {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 10px;
+  }
+
+  .points-section .table-scroll th,
+  .points-section .table-scroll td {
+    padding: 7px 2px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    box-sizing: border-box;
+    text-align: center;
+    font-size: 10px;
+  }
+
+  /* Rank */
+  .points-section .table-scroll th:nth-child(1),
+  .points-section .table-scroll td:nth-child(1) {
+    width: 6%;
+  }
+
+  /* Logo */
+  .points-section .table-scroll th:nth-child(2),
+  .points-section .table-scroll td:nth-child(2) {
+    width: 10%;
+  }
+
+  /* Team */
+  .points-section .table-scroll th:nth-child(3),
+  .points-section .table-scroll td:nth-child(3) {
+    width: 24%;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  /* Played, Wins, Losses */
+  .points-section .table-scroll th:nth-child(4),
+  .points-section .table-scroll td:nth-child(4),
+  .points-section .table-scroll th:nth-child(5),
+  .points-section .table-scroll td:nth-child(5),
+  .points-section .table-scroll th:nth-child(6),
+  .points-section .table-scroll td:nth-child(6) {
+    width: 7%;
+  }
+
+  /* Round Points */
+  .points-section .table-scroll th:nth-child(7),
+  .points-section .table-scroll td:nth-child(7) {
+    width: 14%;
+  }
+
+  /* Total Points */
+  .points-section .table-scroll th:nth-child(8),
+  .points-section .table-scroll td:nth-child(8) {
+    width: 14%;
+  }
+
+  /* Status */
+  .points-section .table-scroll th:nth-child(9),
+  .points-section .table-scroll td:nth-child(9) {
+    width: 11%;
+  }
+
+  .points-section .points-team-logo {
+    width: 22px;
+    height: 22px;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  .points-section .logo-cell {
+    width: auto;
+  }
+
+  .points-section .qualification-badge {
+    min-width: 20px;
+    padding: 3px 4px;
+    font-size: 10px;
+  }
+
+  .points-section .total-points {
+    font-size: 10px;
+  }
+}
+
+/* VERY SMALL MOBILE */
+@media (max-width: 360px) {
+
+  .points-section .table-scroll th,
+  .points-section .table-scroll td {
+    padding: 6px 1px;
+    font-size: 8px;
+  }
+
+  .points-section .points-team-logo {
+    width: 18px;
+    height: 18px;
+  }
+
+  .points-section .qualification-badge {
+    min-width: 17px;
+    padding: 2px;
+    font-size: 9px;
+  }
+}
+
+/* MOBILE RESPONSIVE - ALL PAST SEASON TABLES */
+@media (max-width: 600px) {
+
+  .season-page .season-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .season-page .season-table {
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 10px;
+  }
+
+  .season-page .season-table th,
+  .season-page .season-table td {
+    padding: 8px 3px;
+    font-size: 9px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  /* Rank column */
+  .season-page .season-table th:first-child,
+  .season-page .season-table td:first-child {
+    width: 6%;
+  }
+
+  /* Team column */
+  .season-page .season-table th:nth-child(2),
+  .season-page .season-table td:nth-child(2) {
+    width: 22%;
+    text-align: left;
+  }
+  /* Status column */
+.season-page .season-table th:last-child,
+.season-page .season-table td:last-child {
+  width: 12%;
+  white-space: nowrap;
+  text-align: center;
+}
 }
 
 </style>

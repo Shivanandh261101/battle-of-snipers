@@ -1,130 +1,75 @@
 
 <template>
   <!-- Admin page -->
-  <Admin
-    v-if="showAdmin"
-    @close="showAdmin = false"
-  />
+  <Admin v-if="showAdmin" @close="showAdmin = false"/>
 
   <!-- Public pages -->
   <template v-else>
     <!-- Admin button -->
-    <button
-      class="admin-btn"
-      type="button"
-      title="Admin Login"
-      aria-label="Open admin login"
-      @click="showAdmin = true"
-    >
-      ⚙
-    </button>
+    <button class="admin-btn" type="button" title="Admin Login" aria-label="Open admin login" @click="showAdmin = true"> ⚙ </button>
 
     <!-- Loading page -->
-    <div v-if="modeLoading" class="status-page">
-      <h2>Loading Tournament...</h2>
-    </div>
+<div v-if="modeLoading" class="status-page">
+  <h2>Loading Tournament...</h2>
+</div>
 
-    <!-- Live standings -->
-    <LiveStandings
-      v-else-if="tournamentStarted"
-    />
+<!-- Live standings -->
+<LiveStandings v-else-if="tournamentStarted"/>
 
-    <!-- Registration page -->
-    <div v-else-if="registrationOpen" class="page">
-    <div class="register-card">
-      <div class="header">
-        <h1>BATTLE OF SNIPERS</h1>
-        <h2>SEASON 7</h2>
-        <p>Official Tournament Registration</p>
-      </div>
-
-      <form @submit.prevent="register">
-        <div class="form-group">
-          <label>FF UID <span>*</span></label>
-          <input
-  v-model="form.ffUid"
-  type="text"
-  inputmode="numeric"
-  pattern="[0-9]+"
-  maxlength="20"
-  placeholder="Enter Free Fire UID"
-  required
-  @input="form.ffUid = form.ffUid.replace(/[^0-9]/g, '')"
-/>
+<!-- Registration page -->
+<div v-else-if="registrationOpen" class="page">
+      <div class="register-card">
+        <div class="header">
+          <h1>BATTLE OF SNIPERS</h1>
+          <h2>SEASON 7</h2>
+          <p>Official Tournament Registration</p>
         </div>
-
-        <div class="form-group">
-          <label>FF Name / IGN <span>*</span></label>
-          <input
-            v-model="form.ffName"
-            type="text"
-            placeholder="Enter your FF Name"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Team Name <span>*</span></label>
-          <input
-  v-model="form.teamName"
-  type="text"
-  pattern="[A-Za-z0-9]+( [A-Za-z0-9]+)*"
-  placeholder="Enter Team Name"
-  required
-  @input="form.teamName = form.teamName.replace(/[^A-Za-z0-9 ]/g, '').replace(/ +/g, ' ').replace(/^ /, '')"
-/>
-        </div>
-
-        <div class="form-group">
-          <label>Contact / WhatsApp Number <span>*</span></label>
+        
+        <form @submit.prevent="register">
+          <div class="form-group">
+            <label>FF UID <span>*</span></label>
+            <input v-model="form.ffUid" type="text" inputmode="numeric" pattern="[0-9]+" maxlength="20" placeholder="Enter Free Fire UID" required @input="form.ffUid = form.ffUid.replace(/[^0-9]/g, '')"/>
+          </div>
           
-<input
-  v-model="form.contactNumber"
-  type="tel"
-  inputmode="numeric"
-  pattern="[0-9]{10}"
-  minlength="10"
-  maxlength="10"
-  placeholder="Enter 10-digit WhatsApp Number"
-  required
-  @input="form.contactNumber = form.contactNumber.replace(/[^0-9]/g, '').slice(0, 10)"
-/>
-        </div>
-
-        <div class="form-group">
-          <label>Team Logo <span>*</span></label>
-
-          <div class="file-box">
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              @change="handleLogo"
-              required
-            />
+          <div class="form-group">
+            <label>FF Name / IGN <span>*</span></label>
+            <input v-model="form.ffName" type="text" placeholder="Enter your FF Name" required/>
           </div>
 
-          <small>PNG, JPG or WEBP</small>
+          <div class="form-group">
+            <label>Team Name <span>*</span></label>
+            <input v-model="form.teamName" type="text" pattern="[A-Za-z0-9]+( [A-Za-z0-9]+)*" placeholder="Enter Team Name" required @input="form.teamName = form.teamName.replace(/[^A-Za-z0-9 ]/g, '').replace(/ +/g, ' ').replace(/^ /, '')"/>
+          </div>
+
+          <div class="form-group">
+            <label>Contact / WhatsApp Number <span>*</span></label>
+            <input v-model="form.contactNumber" type="tel" inputmode="numeric" pattern="[0-9]{10}" minlength="10" maxlength="10" placeholder="Enter 10-digit WhatsApp Number" required @input="form.contactNumber = form.contactNumber.replace(/[^0-9]/g, '').slice(0, 10)"/>
+          </div>
+
+          <div class="form-group">
+            <label>Team Logo <span>*</span></label>
+            <div class="file-box">
+              <input type="file" accept="image/png,image/jpeg,image/webp" @change="handleLogo" required/>
+            </div>
+            <small>PNG, JPG or WEBP</small>
+          </div>
+          <button type="submit" class="register-btn" :disabled="isSubmitting"> {{ isSubmitting ? "SUBMITTING... PLEASE WAIT" : "REGISTER NOW" }} </button>
+        </form>
+        
+        <div class="whatsapp-info">
+          <p>After registration, join our official WhatsApp group.</p>
         </div>
-
-        <button type="submit" class="register-btn" :disabled="isSubmitting">
-          {{ isSubmitting ? "SUBMITTING... PLEASE WAIT" : "REGISTER NOW" }}
-        </button>
-      </form>
-
-      <div class="whatsapp-info">
-        <p>After registration, join our official WhatsApp group.</p>
       </div>
     </div>
-  </div>
-
-<!-- Tournament not started page -->
-<div v-else class="status-page">
-  <h1>BATTLE OF SNIPERS</h1>
-  <h2>SEASON 7</h2>
-  <p class="status-title">TOURNAMENT NOT YET STARTED</p>
-  <p>Stay tuned for official tournament updates.</p>
-</div>
-</template>
+    
+    <!-- Tournament not started page -->
+    <div v-else class="status-page">
+      <h1>BATTLE OF SNIPERS</h1>
+      <h2>SEASON 7</h2>
+      <p class="status-title">TOURNAMENT NOT YET STARTED</p>
+      <p>Stay tuned for official tournament updates.</p>
+    </div>
+  </template>
 </template>
 
 <script>
@@ -133,21 +78,21 @@ import LiveStandings from "./LiveStandings.vue";
 
 export default {
   name: "App",
-
- components: {
-  Admin,
-  LiveStandings
-},
+  
+  components: {
+    Admin,
+    LiveStandings
+  },
 
   data() {
     return {
       showAdmin: false,
       isSubmitting: false,
       registrationOpen: true,
-tournamentStarted: false,
-modeLoading: true,
-modeInterval: null,
-
+      tournamentStarted: false,
+      modeLoading: true,
+      modeInterval: null,
+      
       form: {
         ffUid: "",
         ffName: "",
@@ -158,8 +103,7 @@ modeInterval: null,
     };
   },
 
-  
-mounted() {
+  mounted() {
   this.loadTournamentMode();
 
   // Check for admin setting changes every 5 seconds
@@ -168,116 +112,108 @@ mounted() {
   }, 5000);
 },
 
-beforeUnmount() {
-  if (this.modeInterval) {
-    clearInterval(this.modeInterval);
-  }
-},
+  beforeUnmount() {
+    if (this.modeInterval) {
+      clearInterval(this.modeInterval);
+    }
+  },
 
   methods: {
-    
-async loadTournamentMode() {
-  try {
-    const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/tournament-mode",
-      { cache: "no-store" }
-    );
+    async loadTournamentMode() {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/tournament-mode",
+          { cache: "no-store" }
+        );
+      
+        if (!response.ok) {
+          throw new Error("Could not load tournament settings.");
+        }
 
-    if (!response.ok) {
-      throw new Error("Could not load tournament settings.");
-    }
-
-    const settings = await response.json();
-
-    this.registrationOpen = settings.registrationOpen;
-    this.tournamentStarted = settings.tournamentStarted;
-  } catch (error) {
-    console.error("Tournament mode error:", error);
-  } finally {
-    this.modeLoading = false;
-  }
-},
-
+        const settings = await response.json();
+        this.registrationOpen = settings.registrationOpen;
+        this.tournamentStarted = settings.tournamentStarted;
+      } 
+      catch (error) {
+        console.error("Tournament mode error:", error);
+      } 
+      finally {
+        this.modeLoading = false;
+      }
+    },
+  
     handleLogo(event) {
       this.form.teamLogo = event.target.files[0] || null;
     },
-
+  
+    async register() {
+      // Prevent repeated clicks while the current registration request is in progress.
+      if (this.isSubmitting) return;
+      this.isSubmitting = true;
     
-async register() {
-  // Prevent repeated clicks while the current registration request is in progress.
-  if (this.isSubmitting) return;
+      try {
+        if (!(this.form.teamLogo instanceof File)) {
+          alert("Please select your team logo.");
+          return;
+        }
+      
+        const formData = new FormData();
+        formData.append("ffUid", this.form.ffUid);
+        formData.append("ffName", this.form.ffName);
+        formData.append("teamName", this.form.teamName);
+        formData.append("contactNumber", this.form.contactNumber);
+        formData.append("teamLogo", this.form.teamLogo);
 
-  this.isSubmitting = true;
+        const response = await fetch(
+          "http://localhost:5000/api/register",
+          {
+            method: "POST",
+            body: formData
+          }
+        );
 
-  try {
-    if (!(this.form.teamLogo instanceof File)) {
-      alert("Please select your team logo.");
-      return;
-    }
+        const result = await response.json();
 
-    const formData = new FormData();
+        if (!response.ok) {
+          throw new Error(
+            result.message || "Registration failed."
+          );
+        }
 
-    formData.append("ffUid", this.form.ffUid);
-    formData.append("ffName", this.form.ffName);
-    formData.append("teamName", this.form.teamName);
-    formData.append("contactNumber", this.form.contactNumber);
-    formData.append("teamLogo", this.form.teamLogo);
+        // Reset the form after successful registration.
+        this.form = {
+          ffUid: "",
+          ffName: "",
+          teamName: "",
+          contactNumber: "",
+          teamLogo: null
+        };
 
-    const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/register",
-      {
-        method: "POST",
-        body: formData
+        const fileInput = document.querySelector(
+          '.register-card input[type="file"]'
+        );
+
+        if (fileInput) {
+          fileInput.value = "";
+        }
+
+        // Show success message and open the WhatsApp group.
+        const whatsappGroupLink = "https://chat.whatsapp.com/F3okjhQGtVzLxqJcr0EaWu";
+        alert("Registration successful!\n\n" + "Join our official WhatsApp group to get tournament updates.");
+        window.open(
+          whatsappGroupLink,
+          "_blank",
+          "noopener,noreferrer"
+        );
+      } 
+      catch (error) {
+        console.error("Registration error:", error);
+        alert(error.message || "Unable to submit registration.");
+      } 
+      finally {
+        this.isSubmitting = false;
       }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        result.message || "Registration failed."
-      );
     }
-
-    // Reset the form after successful registration.
-    this.form = {
-      ffUid: "",
-      ffName: "",
-      teamName: "",
-      contactNumber: "",
-      teamLogo: null
-    };
-
-    const fileInput = document.querySelector(
-      '.register-card input[type="file"]'
-    );
-
-    if (fileInput) {
-      fileInput.value = "";
-    }
-
-    // Show success message and open the WhatsApp group.
-    const whatsappGroupLink =
-      "https://chat.whatsapp.com/F3okjhQGtVzLxqJcr0EaWu";
-
-    alert(
-      "Registration successful!\n\n" +
-      "Join our official WhatsApp group to get tournament updates."
-    );
-
-    window.open(
-      whatsappGroupLink,
-      "_blank",
-      "noopener,noreferrer"
-    );
-
-  } catch (error) {
-    console.error("Registration error:", error);
-    alert(error.message || "Unable to submit registration.");
-  } finally {
-    this.isSubmitting = false;
-  }
-}
   }
 };
 </script>

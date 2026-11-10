@@ -74,7 +74,6 @@
         </div>
         
         <p v-if="settingsError" class="error-message"> {{ settingsError }} </p>
-        <p v-if="settingsMessage" class="settings-message"> {{ settingsMessage }} </p>
         
         <div class="mode-options">
           <div class="mode-row">
@@ -249,7 +248,6 @@
           </div>
        
           <p v-if="scheduleError" class="error-message"> {{ scheduleError }} </p>
-          <p v-if="scheduleMessage" class="settings-message"> {{ scheduleMessage }} </p>
           <button class="primary-btn" type="submit"> SCHEDULE MATCH </button>
         </form>
       </section>
@@ -264,7 +262,6 @@
           </div>
           
           <p v-if="matchError" class="error-message"> {{ matchError }} </p>
-          <p v-if="matchMessage" class="settings-message"> {{ matchMessage }} </p>
           
           <form class="match-form" @submit.prevent="saveMatch">
             <label for="matchGroup">Select Group</label>
@@ -328,7 +325,6 @@
   </div>
 
   <p v-if="tieError" class="error-message">{{ tieError }}</p>
-  <p v-if="tieMessage" class="settings-message">{{ tieMessage }}</p>
 
   <form class="match-form" @submit.prevent="saveTieBreaker">
     <label>Select Group</label>
@@ -416,7 +412,6 @@
                 <th>GROUP ASSIGNMENT</th>
                 <th>CONTACT NUMBER</th>
                 <th>REGISTERED AT</th>
-                <th>LOGO FILE</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
@@ -470,18 +465,6 @@
                 <td>{{ registration.contactNumber }}</td>
                 <td>{{ formatDate(registration.registeredAt) }}</td>
 
-                <td>
-                  <a
-                    v-if="registration.teamLogo"
-                    class="download-link"
-                    :href="registration.teamLogo"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View / Download ↗
-                  </a>
-                  <span v-else>—</span>
-                </td>
                 <td>
                     <button class="delete-btn" type="button" :disabled="deletingId === registration._id" @click="deleteRegistration(registration)" >
                         {{ deletingId === registration._id ? "Deleting..." : "Delete" }} 
@@ -783,7 +766,7 @@ async saveScheduledMatchEdits() {
 
   try {
     const response = await fetch(
-      `https://battle-of-snipers.onrender.com/api/admin/scheduled-matches/${this.editingScheduledMatchId}`,
+      `http://localhost:5000/api/admin/scheduled-matches/${this.editingScheduledMatchId}`,
       {
         method: "PUT",
         headers: {
@@ -833,7 +816,7 @@ async deleteScheduledMatch(match) {
 
   try {
     const response = await fetch(
-      `https://battle-of-snipers.onrender.com/api/admin/scheduled-matches/${match._id}`,
+      `http://localhost:5000/api/admin/scheduled-matches/${match._id}`,
       {
         method: "DELETE",
         headers: {
@@ -867,7 +850,7 @@ async deleteScheduledMatch(match) {
     async loadScheduledMatches() {
   try {
     const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/admin/scheduled-matches",
+      "http://localhost:5000/api/admin/scheduled-matches",
       {
         method: "GET",
         headers: {
@@ -946,7 +929,7 @@ this.scheduleSaving = true;
 
 try {
   const response = await fetch(
-    "https://battle-of-snipers.onrender.com/api/admin/scheduled-matches",
+    "http://localhost:5000/api/admin/scheduled-matches",
     {
       method: "POST",
       headers: {
@@ -996,7 +979,7 @@ try {
 
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/admin/login",
+          "http://localhost:5000/api/admin/login",
           {
             method: "POST",
             headers: {
@@ -1035,7 +1018,7 @@ try {
 
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/admin/registrations",
+          "http://localhost:5000/api/admin/registrations",
           {
             headers: {
               Authorization: "Bearer " + this.token
@@ -1073,7 +1056,7 @@ async loadTournamentMode() {
 
   try {
     const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/tournament-mode"
+      "http://localhost:5000/api/tournament-mode"
     );
 
     const data = await response.json();
@@ -1123,7 +1106,7 @@ async setTournamentMode(mode) {
 
   try {
     const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/admin/tournament-mode",
+      "http://localhost:5000/api/admin/tournament-mode",
       {
         method: "PUT",
         headers: {
@@ -1190,7 +1173,7 @@ if (
 
   try {
     const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/admin/tournament-mode",
+      "http://localhost:5000/api/admin/tournament-mode",
       {
         method: "PUT",
         headers: {
@@ -1253,7 +1236,7 @@ async saveTeamGroup(registration, selectedGroup) {
 
   try {
     const response = await fetch(
-      `https://battle-of-snipers.onrender.com/api/admin/registrations/${encodeURIComponent(registration._id)}/group`,
+      `http://localhost:5000/api/admin/registrations/${encodeURIComponent(registration._id)}/group`,
       {
         method: "PUT",
         headers: {
@@ -1324,7 +1307,7 @@ async saveMatch() {
 
   try {
     const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/admin/standings/match",
+      "http://localhost:5000/api/admin/standings/match",
       {
         method: "POST",
         headers: {
@@ -1389,7 +1372,7 @@ async saveTieBreaker() {
 
   try {
     const response = await fetch(
-      "https://battle-of-snipers.onrender.com/api/admin/standings/tie-breaker",
+      "http://localhost:5000/api/admin/standings/tie-breaker",
       {
         method: "POST",
         headers: {
@@ -1439,7 +1422,7 @@ async undoLastMatch() {
 
   try {
     const response = await fetch(
-      `https://battle-of-snipers.onrender.com/api/admin/standings/${this.matchGroup}/undo`,
+      `http://localhost:5000/api/admin/standings/${this.matchGroup}/undo`,
       {
         method: "POST",
         headers: {
@@ -1480,7 +1463,7 @@ async deleteRegistration(registration) {
 
   try {
     const response = await fetch(
-      `https://battle-of-snipers.onrender.com/api/admin/registrations/${encodeURIComponent(registration._id)}`,
+      `http://localhost:5000/api/admin/registrations/${encodeURIComponent(registration._id)}`,
       {
         method: "DELETE",
         headers: {
@@ -2448,11 +2431,6 @@ tbody tr:hover {
   color: #ddd;
 }
 
-.settings-message {
-  color: #75df9b;
-  font-size: 13px;
-}
-
 .match-form {
   display: grid;
   grid-template-columns: 1fr;
@@ -2647,15 +2625,9 @@ select option {
   width: 14%;
 }
 
-/* Logo File */
+/* Actions */
 .table-scroll th:nth-child(8),
 .table-scroll td:nth-child(8) {
-  width: 11%;
-}
-
-/* Actions */
-.table-scroll th:nth-child(9),
-.table-scroll td:nth-child(9) {
   width: 8%;
 }
 
