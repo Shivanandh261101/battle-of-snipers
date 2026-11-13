@@ -1022,6 +1022,7 @@ function getRankMovement(currentTeams, history) {
   };
 
   for (const event of history || []) {
+    const ranksBeforeEvent = getRanks();
     let involvedIds = [];
 
     if (event.type === "tieBreaker") {
@@ -1074,12 +1075,10 @@ function getRankMovement(currentTeams, history) {
       ];
     }
 
-    // Update the reference rank ONLY for teams involved in this event.
-    const ranksAfterEvent = getRanks();
-
-    for (const id of involvedIds) {
-      lastPlayedRank.set(id, ranksAfterEvent.get(id));
-    }
+    // Keep the rank from BEFORE this team's latest match.
+for (const id of involvedIds) {
+  lastPlayedRank.set(id, ranksBeforeEvent.get(id));
+}
   }
 
   // Current live rankings.
