@@ -988,68 +988,119 @@ function getQualificationStatus(team, teams, qualifiersPerGroup, maxMatches) {
   return null;
 }
 
-
 function getRankMovement(currentTeams, history) {
   const movement = {};
-
-  if (!history || history.length === 0) {
-    return movement;
-  }
-
-  const lastMatch = history[history.length - 1];
-
-  // Tie-breaker events are not normal match movements.
-  if (lastMatch.type === "tieBreaker") {
-    return movement;
-  }
-
-  const previousTeams = currentTeams.map(team => ({ ...team }));
-
-  const winner = previousTeams.find(
-    team => team._id.toString() === lastMatch.winnerId.toString()
-  );
-
-  const loser = previousTeams.find(
-    team => team._id.toString() === lastMatch.loserId.toString()
-  );
-
-  if (!winner || !loser || winner.won < 1 || loser.lost < 1) {
-    return movement;
-  }
-
-  // Reverse the latest match to reconstruct previous standings.
-  winner.won -= 1;
-  winner.roundsPoints -= lastMatch.winnerRoundPoints;
-  winner.totalPoints = winner.won * 4;
-  winner.played = winner.won + winner.lost;
-
-  loser.lost -= 1;
-  loser.roundsPoints -= lastMatch.loserRoundPoints;
-  loser.totalPoints = loser.won * 4;
-  loser.played = loser.won + loser.lost;
 
   const sortStandings = (a, b) =>
     b.totalPoints - a.totalPoints ||
     b.roundsPoints - a.roundsPoints ||
     a.teamName.localeCompare(b.teamName);
 
-  const previousRank = new Map(
-    [...previousTeams]
-      .sort(sortStandings)
-      .map((team, index) => [team._id.toString(), index + 1])
-  );
+  // Rebuild standings from the complete match history.
+  const replayTeams = currentTeams.map(team => ({
+    _id: team._id,
+    teamName: team.teamName,
+    won: 0,
+    lost: 0,
+    roundsPoints: 0,
+    totalPoints: 0,
+    played: 0
+  }));
 
-  const currentRank = new Map(
+  // Stores each team's rank immediately after its own latest event.
+  const lastPlayedRank = new Map();
+
+  const getRanks = () => {
+    return new Map(
+      [...replayTeams]
+        .sort(sortStandings)
+        .map((team, index) => [
+          team._id.toString(),
+          index + 1
+        ])
+    );
+  };
+
+  for (const event of history || []) {
+    let involvedIds = [];
+
+    if (event.type === "tieBreaker") {
+      const team1 = replayTeams.find(
+        team => team._id.toString() === event.team1Id?.toString()
+      );
+
+      const team2 = replayTeams.find(
+        team => team._id.toString() === event.team2Id?.toString()
+      );
+
+      if (!team1 || !team2) continue;
+
+      team1.lost += 1;
+      team1.roundsPoints += event.team1RoundPoints || 0;
+      team1.played = team1.won + team1.lost;
+
+      team2.lost += 1;
+      team2.roundsPoints += event.team2RoundPoints || 0;
+      team2.played = team2.won + team2.lost;
+
+      involvedIds = [
+        team1._id.toString(),
+        team2._id.toString()
+      ];
+    } else {
+      const winner = replayTeams.find(
+        team => team._id.toString() === event.winnerId?.toString()
+      );
+
+      const loser = replayTeams.find(
+        team => team._id.toString() === event.loserId?.toString()
+      );
+
+      if (!winner || !loser) continue;
+
+      winner.won += 1;
+      winner.roundsPoints += event.winnerRoundPoints || 0;
+      winner.totalPoints = winner.won * 4;
+      winner.played = winner.won + winner.lost;
+
+      loser.lost += 1;
+      loser.roundsPoints += event.loserRoundPoints || 0;
+      loser.totalPoints = loser.won * 4;
+      loser.played = loser.won + loser.lost;
+
+      involvedIds = [
+        winner._id.toString(),
+        loser._id.toString()
+      ];
+    }
+
+    // Update the reference rank ONLY for teams involved in this event.
+    const ranksAfterEvent = getRanks();
+
+    for (const id of involvedIds) {
+      lastPlayedRank.set(id, ranksAfterEvent.get(id));
+    }
+  }
+
+  // Current live rankings.
+  const currentRanks = new Map(
     [...currentTeams]
       .sort(sortStandings)
-      .map((team, index) => [team._id.toString(), index + 1])
+      .map((team, index) => [
+        team._id.toString(),
+        index + 1
+      ])
   );
 
+  // Compare each team with its rank after its own latest event.
   for (const team of currentTeams) {
     const id = team._id.toString();
+    const referenceRank = lastPlayedRank.get(id);
+    const currentRank = currentRanks.get(id);
 
-    movement[id] =
-      previousRank.get(id) - currentRank.get(id);
+    movement[id] = referenceRank
+      ? referenceRank - currentRank
+      : 0;
   }
 
   return movement;

@@ -121,25 +121,7 @@
                 </thead>
                 <tbody>
                   <tr v-for="(team, index) in pointsGroups[groupName]" :key="team.registrationId || team._id || index">
-                    <td class="rank-cell">
-  <span>{{ index + 1 }}</span>
-
-  <span
-    v-if="team.rankChange > 0"
-    class="rank-change rank-up"
-    :aria-label="`Moved up ${team.rankChange} positions`"
-  >
-    ↑ {{ team.rankChange }}
-  </span>
-
-  <span
-    v-else-if="team.rankChange < 0"
-    class="rank-change rank-down"
-    :aria-label="`Moved down ${-team.rankChange} positions`"
-  >
-    ↓ {{ -team.rankChange }}
-  </span>
-</td>
+                    <td>{{ index + 1 }}</td>
                     <td class="logo-cell">
                       <img v-if="team.teamLogo" :src="team.teamLogo" :alt="team.teamName + ' logo'" class="points-team-logo"/>
                       <span v-else class="no-logo">—</span>
@@ -151,10 +133,36 @@
                     <td>{{ team.roundsPoints || 0 }}</td>
                     <td class="total-points"> {{ team.totalPoints || 0 }} </td>
                     <td>
-                      <span  v-if="team.qualificationStatus === 'Q'" class="qualification-badge qualified"> Q </span>
-                      <span v-else-if="team.qualificationStatus === 'E'" class="qualification-badge eliminated"> E </span>
-                      <span v-else>—</span>
-                    </td>
+  <span
+    v-if="team.qualificationStatus === 'Q'"
+    class="qualification-badge qualified"
+  >
+    Q
+  </span>
+
+  <span
+    v-else-if="team.qualificationStatus === 'E'"
+    class="qualification-badge eliminated"
+  >
+    E
+  </span>
+
+  <span
+    v-else-if="team.rankChange > 0"
+    class="rank-change rank-up"
+  >
+    ↑ {{ team.rankChange }}
+  </span>
+
+  <span
+    v-else-if="team.rankChange < 0"
+    class="rank-change rank-down"
+  >
+    ↓ {{ -team.rankChange }}
+  </span>
+
+  <span v-else>—</span>
+</td>
                   </tr>
                   <tr v-if="pointsGroups[groupName].length === 0">
                     <td colspan="9">No teams in this group yet.</td>
