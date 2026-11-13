@@ -26,12 +26,12 @@
         <h3 class="verified-success-title">UID Verified Successfully!</h3>
         <div class="player-details">
           <div class="player-info-row">
-            <p><strong>Player:</strong>{{ playerName }}</p>
+            <p><strong>Player: </strong>{{ playerName }}</p>
             <button class="page-back-btn" @click="goBack"> Back </button>
           </div>
-          <p><strong>FF UID:</strong>{{ verifiedUid }}</p>
-          <p><strong>Team:</strong>{{ teamName }}</p>
-          <p><strong>Group:</strong>{{ playerGroup ? `GROUP ${playerGroup}` : "NOT ASSIGNED YET" }}</p>
+          <p><strong>FF UID: </strong>{{ verifiedUid }}</p>
+          <p><strong>Team: </strong>{{ teamName }}</p>
+          <p><strong>Group: </strong>{{ playerGroup ? `GROUP ${playerGroup}` : "NOT ASSIGNED YET" }}</p>
         </div>
         <div class="scheduled-matches-section">
           <h2>Scheduled Matches</h2>
@@ -42,13 +42,44 @@
             <div v-for="match in scheduledMatches" :key="match._id" class="scheduled-match-card">
               <div class="scheduled-match-header">
                 <span>Group {{ match.group }}</span>
-                <span>{{ new Date(match.matchDate).toLocaleString() }}</span>
+                <span>
+  {{
+    new Date(match.matchDate).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  }}
+</span>
               </div>
               <div class="scheduled-match-teams">
-                <strong>{{ match.team1Name }}</strong>
-                <span>VS</span>
-                <strong>{{ match.team2Name }}</strong>
-              </div>
+
+  <div class="scheduled-team scheduled-team-left">
+    <img
+      v-if="match.team1Id?.teamLogo"
+      :src="match.team1Id.teamLogo"
+      :alt="match.team1Name + ' logo'"
+      class="scheduled-team-logo"
+    />
+    <strong>{{ match.team1Name }}</strong>
+  </div>
+
+  <span class="scheduled-match-vs">VS</span>
+
+  <div class="scheduled-team scheduled-team-right">
+    <strong>{{ match.team2Name }}</strong>
+    <img
+      v-if="match.team2Id?.teamLogo"
+      :src="match.team2Id.teamLogo"
+      :alt="match.team2Name + ' logo'"
+      class="scheduled-team-logo"
+    />
+  </div>
+
+</div>
               <p class="scheduled-match-assigned"> Assigned to: {{ match.assignedTo }} </p>
             </div>
           </div>
@@ -59,7 +90,6 @@
           <button type="button" class="past-seasons-button" @click="openSeasonsPage">
             <span class="past-seasons-icon">🏆</span>
             <span><strong>PAST SEASONS</strong><small>View completed tournaments</small></span>
-            <span class="past-seasons-arrow">→</span>
           </button>
         </div>
         
@@ -91,7 +121,25 @@
                 </thead>
                 <tbody>
                   <tr v-for="(team, index) in pointsGroups[groupName]" :key="team.registrationId || team._id || index">
-                    <td>{{ index + 1 }}</td>
+                    <td class="rank-cell">
+  <span>{{ index + 1 }}</span>
+
+  <span
+    v-if="team.rankChange > 0"
+    class="rank-change rank-up"
+    :aria-label="`Moved up ${team.rankChange} positions`"
+  >
+    ↑ {{ team.rankChange }}
+  </span>
+
+  <span
+    v-else-if="team.rankChange < 0"
+    class="rank-change rank-down"
+    :aria-label="`Moved down ${-team.rankChange} positions`"
+  >
+    ↓ {{ -team.rankChange }}
+  </span>
+</td>
                     <td class="logo-cell">
                       <img v-if="team.teamLogo" :src="team.teamLogo" :alt="team.teamName + ' logo'" class="points-team-logo"/>
                       <span v-else class="no-logo">—</span>
@@ -130,7 +178,7 @@
             <span class="season-card-label">BATTLE OF SNIPERS</span>
             <strong>{{ season.title }}</strong>
             <span class="season-card-status">{{ season.status }}</span>
-            <span class="season-card-action">VIEW SEASON →</span>
+            <span class="season-card-action">VIEW SEASON </span>
           </button>
         </div>
       </div>
@@ -779,7 +827,7 @@
 </template>
 
 <script>
-const API_BASE_URL = "https://battle-of-snipers.onrender.com";
+const API_BASE_URL = "http://localhost:5000";
 export default {
   name: "LiveStandings",
 
@@ -970,7 +1018,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/standings/teams",
+          "http://localhost:5000/api/standings/teams",
           {
             cache: "no-store"
           }
@@ -1000,7 +1048,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/standings/points",
+          "http://localhost:5000/api/standings/points",
           { cache: "no-store" }
         );
         
@@ -1029,7 +1077,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/scheduled-matches/for-player",
+          "http://localhost:5000/api/scheduled-matches/for-player",
           {
             method: "POST",
             headers: {
@@ -1160,7 +1208,7 @@ backFromPlayoffs() {
 
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/verify-ff-uid",
+          "http://localhost:5000/api/verify-ff-uid",
           {
             method: "POST",
             headers: {
@@ -1621,12 +1669,64 @@ backFromPlayoffs() {
     padding: 14px;
   }
 
+  
   .scheduled-match-teams {
-    gap: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    margin: 22px 0;
+  }
+
+  .scheduled-team {
+    display: flex;
+    align-items: center;
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .scheduled-team-left {
+    justify-content: flex-start;
+  }
+
+  .scheduled-team-right {
+    justify-content: flex-end;
+  }
+
+  .scheduled-team strong {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 26px);
+    font-size: 11px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .scheduled-team-left strong {
+    text-align: left;
+  }
+
+  .scheduled-team-right strong {
+    text-align: right;
+  }
+
+  .scheduled-team-logo {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    object-fit: contain;
+  }
+
+  .scheduled-match-vs {
+    flex: 0 0 28px;
+    text-align: center;
+    color: #ff5252;
+    font-weight: 900;
     font-size: 13px;
   }
 }
-
 
 /* Historical seasons */
 .seasons-section {
@@ -2758,18 +2858,26 @@ backFromPlayoffs() {
     box-sizing: border-box;
   }
 
+  .season-page .season-groups-grid,
+  .season-page .season-group-table {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
   .season-page .season-table {
     width: 100%;
     min-width: 0 !important;
     max-width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
-    font-size: 10px;
+    box-sizing: border-box;
+    font-size: 9px;
   }
 
   .season-page .season-table th,
   .season-page .season-table td {
-    padding: 8px 3px;
+    padding: 7px 2px;
     font-size: 9px;
     white-space: normal;
     overflow-wrap: anywhere;
@@ -2778,25 +2886,59 @@ backFromPlayoffs() {
     box-sizing: border-box;
   }
 
-  /* Rank column */
+  /* Rank */
   .season-page .season-table th:first-child,
   .season-page .season-table td:first-child {
     width: 6%;
   }
 
-  /* Team column */
+  /* Team */
   .season-page .season-table th:nth-child(2),
   .season-page .season-table td:nth-child(2) {
-    width: 22%;
+    width: 20%;
     text-align: left;
   }
-  /* Status column */
+
+  /* Status */
+  .season-page .season-table th:last-child,
+  .season-page .season-table td:last-child {
+    width: 16%;
+    text-align: center;
+  }
+
+
+/* Champion / Runner-up badges on mobile */
 .season-page .season-table th:last-child,
 .season-page .season-table td:last-child {
-  width: 12%;
-  white-space: nowrap;
+  width: 21% !important;
   text-align: center;
 }
+
+.season-page .season-result-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  padding: 3px 2px;
+  gap: 1px;
+  font-size: 7px;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+  .season-page .season-table td:last-child {
+    white-space: nowrap;
+  }
+
+  .season-page .season-qualification-badge {
+    min-width: 17px;
+    padding: 3px 4px;
+    font-size: 9px;
+    box-sizing: border-box;
+  }
 }
 
 /* SEASON 1 PLAYOFFS - MOBILE LAYOUT */
@@ -2910,6 +3052,123 @@ backFromPlayoffs() {
     font-size: 11px;
     font-weight: 800;
   }
+}
+
+
+.scheduled-match-teams {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 6px;
+  box-sizing: border-box;
+  margin: 22px 0;
+}
+
+.scheduled-team {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  width: 0;
+  max-width: none;
+  min-width: 0;
+  gap: 4px;
+}
+
+.scheduled-team-left {
+  justify-content: flex-start;
+}
+
+.scheduled-team-right {
+  justify-content: flex-end;
+}
+
+.scheduled-team strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.scheduled-team-left strong {
+  text-align: left;
+}
+
+.scheduled-team-right strong {
+  text-align: right;
+}
+
+.scheduled-team-logo {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+  padding: 2px;
+}
+
+.scheduled-match-vs {
+  flex: 0 0 auto;
+  color: #ff5252;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Past Seasons - Premium Dark Cards */
+.season-card {
+  background: linear-gradient(145deg, #20202a, #101016) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 190, 50, 0.4);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.season-card-label {
+  color: #ffbd45 !important;
+}
+
+.season-card strong {
+  color: #ffffff !important;
+}
+
+.season-card-status {
+  color: #c4c9d4 !important;
+}
+
+.season-card-action {
+  color: #ffbd45 !important;
+  font-weight: 800;
+}
+
+.season-card:hover {
+  background: linear-gradient(145deg, #292936, #15151e) !important;
+  border-color: #ffbd45;
+  box-shadow: 0 5px 18px rgba(255, 189, 69, 0.12);
+}
+
+.rank-cell {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.rank-change {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.rank-up {
+  color: #22c55e;
+}
+
+.rank-down {
+  color: #ef4444;
 }
 
 </style>

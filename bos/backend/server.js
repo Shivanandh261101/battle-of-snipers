@@ -139,7 +139,6 @@ mongoose
     }
   });
   
-  
 app.post("/api/scheduled-matches/for-player", async (req, res) => {
   try {
     const { ffUid } = req.body || {};
@@ -174,6 +173,14 @@ app.post("/api/scheduled-matches/for-player", async (req, res) => {
     { team2Name: player.teamName }
   ]
 })
+  .populate({
+    path: "team1Id",
+    select: "teamLogo"
+  })
+  .populate({
+    path: "team2Id",
+    select: "teamLogo"
+  })
   .sort({ matchDate: 1 })
   .lean();
 
@@ -981,6 +988,73 @@ function getQualificationStatus(team, teams, qualifiersPerGroup, maxMatches) {
   return null;
 }
 
+
+function getRankMovement(currentTeams, history) {
+  const movement = {};
+
+  if (!history || history.length === 0) {
+    return movement;
+  }
+
+  const lastMatch = history[history.length - 1];
+
+  // Tie-breaker events are not normal match movements.
+  if (lastMatch.type === "tieBreaker") {
+    return movement;
+  }
+
+  const previousTeams = currentTeams.map(team => ({ ...team }));
+
+  const winner = previousTeams.find(
+    team => team._id.toString() === lastMatch.winnerId.toString()
+  );
+
+  const loser = previousTeams.find(
+    team => team._id.toString() === lastMatch.loserId.toString()
+  );
+
+  if (!winner || !loser || winner.won < 1 || loser.lost < 1) {
+    return movement;
+  }
+
+  // Reverse the latest match to reconstruct previous standings.
+  winner.won -= 1;
+  winner.roundsPoints -= lastMatch.winnerRoundPoints;
+  winner.totalPoints = winner.won * 4;
+  winner.played = winner.won + winner.lost;
+
+  loser.lost -= 1;
+  loser.roundsPoints -= lastMatch.loserRoundPoints;
+  loser.totalPoints = loser.won * 4;
+  loser.played = loser.won + loser.lost;
+
+  const sortStandings = (a, b) =>
+    b.totalPoints - a.totalPoints ||
+    b.roundsPoints - a.roundsPoints ||
+    a.teamName.localeCompare(b.teamName);
+
+  const previousRank = new Map(
+    [...previousTeams]
+      .sort(sortStandings)
+      .map((team, index) => [team._id.toString(), index + 1])
+  );
+
+  const currentRank = new Map(
+    [...currentTeams]
+      .sort(sortStandings)
+      .map((team, index) => [team._id.toString(), index + 1])
+  );
+
+  for (const team of currentTeams) {
+    const id = team._id.toString();
+
+    movement[id] =
+      previousRank.get(id) - currentRank.get(id);
+  }
+
+  return movement;
+}
+
 // ADMIN: Save a match result
 app.post("/api/admin/standings/match", verifyAdmin, async (req, res) => {
   try {
@@ -1262,40 +1336,57 @@ app.get("/api/standings/points", async (req, res) => {
     const qualifiersPerGroup = settings?.qualifiersPerGroup ?? null;
     const groups = { A: [], B: [] };
 
-    for (const group of ["A", "B"]) {
-      const savedResult = results.find(result => result.group === group);
-      const savedTeams = savedResult?.teams || [];
-      groups[group] = registrations.filter(team => team.group === group).map(team => {
-        const score = savedTeams.find(saved => saved.registrationId.toString() === team._id.toString());
-        return {
-          _id: team._id,
-          teamName: team.teamName,
-          teamLogo: team.teamLogo,
-          played: (score?.won || 0) + (score?.lost || 0),
-          won: score?.won || 0,
-          lost: score?.lost || 0,
-          roundsPoints: score?.roundsPoints || 0,
-          totalPoints: score?.totalPoints || 0
-        };
-      })
-      .sort((a, b) =>
-  b.totalPoints - a.totalPoints ||
-  b.roundsPoints - a.roundsPoints
-)
-.map(team => ({
-  ...team,
-  qualificationStatus:
-    settings?.tournamentStarted &&
-    groups[group].some(row => row.played > 0)
-      ? getQualificationStatus(
-          team,
-          groups[group],
-          qualifiersPerGroup,
-          settings?.groupAMatches
-        )
-      : null
-}));
-    }
+    
+for (const group of ["A", "B"]) {
+  const savedResult = results.find(result => result.group === group);
+  const savedTeams = savedResult?.teams || [];
+
+  const groupTeams = registrations
+    .filter(team => team.group === group)
+    .map(team => {
+      const score = savedTeams.find(
+        saved => saved.registrationId.toString() === team._id.toString()
+      );
+
+      return {
+        _id: team._id,
+        teamName: team.teamName,
+        teamLogo: team.teamLogo,
+        played: (score?.won || 0) + (score?.lost || 0),
+        won: score?.won || 0,
+        lost: score?.lost || 0,
+        roundsPoints: score?.roundsPoints || 0,
+        totalPoints: score?.totalPoints || 0
+      };
+    })
+    .sort((a, b) =>
+      b.totalPoints - a.totalPoints ||
+      b.roundsPoints - a.roundsPoints ||
+      a.teamName.localeCompare(b.teamName)
+    );
+
+  // Compare current standings with standings before the latest match.
+  const rankMovement = getRankMovement(
+    groupTeams,
+    savedResult?.history || []
+  );
+
+  groups[group] = groupTeams.map(team => ({
+    ...team,
+
+    rankChange: rankMovement[team._id.toString()] || 0,
+
+    qualificationStatus:
+      settings?.tournamentStarted && groupTeams.some(row => row.played > 0)
+        ? getQualificationStatus(
+            team,
+            groupTeams,
+            qualifiersPerGroup,
+            settings?.groupAMatches
+          )
+        : null
+  }));
+}
 
     return res.json({ groups });
   } catch (error) {
