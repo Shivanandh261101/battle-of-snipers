@@ -122,7 +122,7 @@ export default {
     async loadTournamentMode() {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/tournament-mode",
+          "https://battle-of-snipers.onrender.com/api/tournament-mode",
           { cache: "no-store" }
         );
       
@@ -165,7 +165,7 @@ export default {
         formData.append("teamLogo", this.form.teamLogo);
 
         const response = await fetch(
-          "http://localhost:5000/api/register",
+          "https://battle-of-snipers.onrender.com/api/register",
           {
             method: "POST",
             body: formData
