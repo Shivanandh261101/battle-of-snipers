@@ -33,16 +33,16 @@ const season2 = {
     },
     {
       rank: 2,
-      name: "Aryan Gaming",
-      stats: { b: 1, m: 6, kp: 9, pp: 28, total: 37 },
+      name: "Toxic Gamers",
+      stats: { b: 1, m: 6, kp: 6, pp: 31, total: 37 },
       status: "RUNNER-UP"
     },
     {
       rank: 3,
-      name: "Toxic Gamers",
-      stats: { b: 1, m: 6, kp: 6, pp: 31, total: 37 },
+      name: "Aryan Gaming",
+      stats: { b: 1, m: 6, kp: 9, pp: 28, total: 37 },
       status: "E"
-    },
+    }, 
     {
       rank: 4,
       name: "Hunter Gaming",

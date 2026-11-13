@@ -17,7 +17,7 @@
           {{ loading ? "VERIFYING..." : "VERIFY & VIEW STANDINGS" }}
         </button>
       </form>
-      <p v-if="message" class="error-message"> {{ message }} </p>
+      <p v-if="message" class="error-message">{{ message }}</p>
     </section>
 
     <!-- Step 2: Show only after successful verification -->
@@ -25,18 +25,14 @@
       <div v-if="seasonView === 'dashboard'">
         <h3 class="verified-success-title">UID Verified Successfully!</h3>
         <div class="player-details">
-  <div class="player-info-row">
-    <p><strong>Player:</strong> {{ playerName }}</p>
-    <button class="page-back-btn" @click="goBack"> Back </button>
-  </div>
-
-  <p><strong>FF UID:</strong> {{ verifiedUid }}</p>
-  <p><strong>Team:</strong> {{ teamName }}</p>
-  <p>
-    <strong>Group:</strong>
-    {{ playerGroup ? `GROUP ${playerGroup}` : "NOT ASSIGNED YET" }}
-  </p>
-</div>
+          <div class="player-info-row">
+            <p><strong>Player:</strong>{{ playerName }}</p>
+            <button class="page-back-btn" @click="goBack"> Back </button>
+          </div>
+          <p><strong>FF UID:</strong>{{ verifiedUid }}</p>
+          <p><strong>Team:</strong>{{ teamName }}</p>
+          <p><strong>Group:</strong>{{ playerGroup ? `GROUP ${playerGroup}` : "NOT ASSIGNED YET" }}</p>
+        </div>
         <div class="scheduled-matches-section">
           <h2>Scheduled Matches</h2>
           <p v-if="scheduledMatchesLoading"> Loading scheduled matches... </p>
@@ -57,15 +53,12 @@
             </div>
           </div>
         </div>
-
+        
         <!-- PAST SEASONS BUTTON ON DASHBOARD -->
         <div class="past-seasons-entry">
           <button type="button" class="past-seasons-button" @click="openSeasonsPage">
             <span class="past-seasons-icon">🏆</span>
-            <span>
-              <strong>PAST SEASONS</strong>
-              <small>View completed tournaments</small>
-            </span>
+            <span><strong>PAST SEASONS</strong><small>View completed tournaments</small></span>
             <span class="past-seasons-arrow">→</span>
           </button>
         </div>
@@ -78,7 +71,7 @@
 
         <div class="points-section">
           <h3>LIVE POINTS TABLE</h3>
-          <p v-if="pointsError" class="error-message"> {{ pointsError }} </p>
+          <p v-if="pointsError" class="error-message">{{ pointsError }}</p>
           <div v-for="groupName in ['A', 'B']" :key="groupName" class="points-group">
             <h4>GROUP {{ groupName }}</h4>
             <div class="table-scroll">
@@ -129,7 +122,6 @@
       <div v-else-if="seasonView === 'seasons'" class="season-page">
         <button type="button" class="season-back-button" @click="backToDashboard"> Back </button>
         <h2>🏆 PAST SEASONS</h2>
-        <p class="season-page-subtitle"> Select a completed season to view its results. </p>
         <p v-if="seasonsLoading">Loading seasons...</p>
         <p v-else-if="seasonsError" class="error-message"> {{ seasonsError }} </p>
         <p v-else-if="seasons.length === 0"> No completed seasons available yet. </p>
@@ -147,14 +139,7 @@
       <div v-else-if="seasonView === 'details'" class="season-page">
         <button type="button" class="season-back-button" @click="backToSeasons"> Back </button>
         <button type="button" class="season-back-button" @click="openSeasonMatches"> Matches </button>
-        <button
-  v-if="hasPlayoffs(selectedSeason)"
-  type="button"
-  class="season-back-button"
-  @click="openSeasonPlayoffs"
->
-  🏆 Playoffs 
-</button>
+        <button v-if="hasPlayoffs(selectedSeason) && Number(selectedSeason.seasonNumber) !== 5" type="button" class="season-back-button" @click="openSeasonPlayoffs"> 🏆 Playoffs </button>
         <template v-if="selectedSeason">
           <h2>{{ selectedSeason.title }}</h2>
           <p class="season-page-subtitle">Final Standings</p>
@@ -162,127 +147,56 @@
         <p v-if="seasonDetailsLoading">Loading season details...</p>
         <p v-else-if="seasonDetailsError" class="error-message"> {{ seasonDetailsError }} </p>
         <!-- SEASON 5: GRAND FINAL INSTEAD OF STANDINGS -->
-<div
-  v-else-if="selectedSeason && Number(selectedSeason.seasonNumber) === 5"
-  class="season-five-final"
->
-  <div class="season-five-final-header">
-    <span class="season-five-kicker">BATTLE OF SNIPERS</span>
-    <h3>🏆 GRAND FINAL 🏆</h3>
-    <span class="season-five-format">BO5</span>
-  </div>
-
-  <div class="season-five-date">
-    TOURNAMENT FINAL
-  </div>
-
-  <div class="season-five-team winner">
-    <span>Strange Gaming</span>
-    <strong>3</strong>
-  </div>
-
-  <div class="season-five-team runner-up">
-    <span>MRAK</span>
-    <strong>2</strong>
-  </div>
-
-  <div class="season-five-champion">
-    <span class="season-five-trophy">♛</span>
-    <span class="season-five-champion-label">
-      BOS SEASON 5 CHAMPION
-    </span>
-    <strong>Strange Gaming</strong>
-    <span class="season-five-runner-up">
-      🥈 Runner-up: MRAK
-    </span>
-  </div>
-</div>
+        <div v-else-if="selectedSeason && Number(selectedSeason.seasonNumber) === 5" class="season-five-final">
+          <div class="season-five-final-header">
+            <span class="season-five-kicker">BATTLE OF SNIPERS</span>
+            <h3>🏆 GRAND FINAL 🏆</h3>
+            <span class="season-five-format">BO5</span>
+          </div>
+          <div class="season-five-date"> TOURNAMENT FINAL </div>
+          <div class="season-five-team winner">
+            <span>Strange Gaming</span>
+            <strong>3</strong>
+          </div>
+          <div class="season-five-team runner-up">
+            <span>MRAK</span>
+            <strong>2</strong> 
+          </div>
+          <div class="season-five-champion">
+            <span class="season-five-trophy">♛</span>    
+            <span class="season-five-champion-label"> BOS SEASON 5 CHAMPION </span>
+            <strong>Strange Gaming</strong>
+            <span class="season-five-runner-up"> 🥈 Runner-up: MRAK </span>
+          </div>
+        </div>
+        
         <!-- SEASON 4: GROUP A AND GROUP B -->
-<div v-else-if="selectedSeason && [4, 6].includes(Number(selectedSeason.seasonNumber))" class="season-groups-grid">
-  <section
-    v-for="group in getSeasonGroups(selectedSeason)"
-    :key="group.name"
-    class="season-group-table"
-  >
-    <h3>GROUP {{ group.name }}</h3>
-
-    <div class="season-table-scroll">
-      <table class="season-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Team</th>
-
-            <th
-              v-for="column in getSeasonColumns(selectedSeason)"
-              :key="column.key"
-            >
-              {{ column.label }}
-            </th>
-
-            <th>Status</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr
-            v-for="team in group.teams"
-            :key="`${group.name}-${team.rank}`"
-          >
-            <td>{{ team.rank }}</td>
-            <td>{{ team.name }}</td>
-
-            <td
-              v-for="column in getSeasonColumns(selectedSeason)"
-              :key="column.key"
-            >
-              {{ getSeasonStat(team, column.key) }}
-            </td>
-
-            <td>
-              <span
-                v-if="team.status === 'CHAMPION'"
-                class="season-result-badge season-champion"
-              >
-                🏆 CHAMPION
-              </span>
-
-              <span
-                v-else-if="team.status === 'RUNNER-UP'"
-                class="season-result-badge season-runner-up"
-              >
-                🥈 RUNNER-UP
-              </span>
-
-              <span
-                v-else-if="team.status === 'Q'"
-                class="season-qualification-badge season-qualified"
-              >
-                Q
-              </span>
-
-              <span
-                v-else-if="team.status === 'E'"
-                class="season-qualification-badge season-eliminated"
-              >
-                E
-              </span>
-
-              <span
-                v-else-if="Number(team.rank) <= 8"
-                class="season-qualification-badge season-qualified"
-              >
-                Q
-              </span>
-
-              <span
-                v-else
-                class="season-qualification-badge season-eliminated"
-              >
-                E
-              </span>
-            </td>
-          </tr>
+        <div v-else-if="selectedSeason && [4, 6].includes(Number(selectedSeason.seasonNumber))" class="season-groups-grid">
+          <section v-for="group in getSeasonGroups(selectedSeason)" :key="group.name" class="season-group-table">
+            <h3>GROUP {{ group.name }}</h3>
+            <div class="season-table-scroll">
+              <table class="season-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Team</th>
+                    <th v-for="column in getSeasonColumns(selectedSeason)" :key="column.key">{{ column.label }}</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="team in group.teams" :key="`${group.name}-${team.rank}`">
+                    <td>{{ team.rank }}</td>
+                    <td>{{ team.name }}</td>
+                    <td v-for="column in getSeasonColumns(selectedSeason)" :key="column.key">{{ getSeasonStat(team, column.key) }}</td>
+                    <td><span v-if="team.status === 'CHAMPION'" class="season-result-badge season-champion"> 🏆 CHAMPION </span>
+                      <span v-else-if="team.status === 'RUNNER-UP'" class="season-result-badge season-runner-up"> 🥈 RUNNER-UP </span>
+                      <span v-else-if="team.status === 'Q'" class="season-qualification-badge season-qualified"> Q </span>
+                      <span v-else-if="team.status === 'E'" class="season-qualification-badge season-eliminated"> E </span>
+                      <span v-else-if="Number(team.rank) <= 8" class="season-qualification-badge season-qualified"> Q </span>
+                      <span v-else class="season-qualification-badge season-eliminated"> E </span>
+                    </td>
+                  </tr>
 
           <tr v-if="group.teams.length === 0">
             <td :colspan="getSeasonColumns(selectedSeason).length + 3">
@@ -370,14 +284,16 @@
                 <strong class="playoff-score">
                   {{ semi[teamKey === 'team1' ? 'score1' : 'score2'] }}
                 </strong>
-
-                <span
-                  v-if="semi.winner === semi[teamKey]"
-                  class="playoff-win-mark"
-                >
-                  WIN
-                </span>
               </div>
+              <div class="playoff-route-note">
+  <span class="route-winner" v-if="semi.winner">
+    ✓ {{ semi.winner }} → GRAND FINAL
+  </span>
+
+  <span class="route-loser" v-if="semi.winner">
+    ✕ {{ semi.winner === semi.team1 ? semi.team2 : semi.team1 }} → ELIMINATED
+  </span>
+</div>
             </article>
 
           </div>
@@ -475,29 +391,20 @@
                     teamKey === 'team1' ? 'score1' : 'score2'
                   ] }}
                 </strong>
-
-                <span
-                  v-if="
-                    selectedSeason.playoffs.semiFinals[0]?.winner ===
-                    selectedSeason.playoffs.semiFinals[0]?.[teamKey]
-                  "
-                  class="playoff-win-mark"
-                >
-                  DIRECT TO FINAL
-                </span>
-
-                <span
-                  v-else
-                  class="playoff-win-mark"
-                >
-                  TO SEMI-FINAL 2
-                </span>
               </div>
+              <div class="playoff-route-note">
+  <span class="route-winner">
+    ✓ {{ selectedSeason.playoffs.semiFinals[0]?.winner }} → GRAND FINAL
+  </span>
+  <span class="route-loser" v-if="selectedSeason.playoffs.semiFinals[0]?.winner">
+  ✕ {{
+    selectedSeason.playoffs.semiFinals[0].winner === selectedSeason.playoffs.semiFinals[0].team1
+      ? selectedSeason.playoffs.semiFinals[0].team2
+      : selectedSeason.playoffs.semiFinals[0].team1
+  }} → SEMI-FINAL 2
+</span>
+</div>
             </article>
-
-            <div class="playoff-flow-label">
-              Semi-Final 1 loser ↓
-            </div>
 
             <article
               v-if="selectedSeason.playoffs.eliminator"
@@ -533,27 +440,25 @@
                     teamKey === 'team1' ? 'score1' : 'score2'
                   ] }}
                 </strong>
-
-                <span
-                  v-if="
-                    selectedSeason.playoffs.eliminator.winner ===
-                    selectedSeason.playoffs.eliminator[teamKey]
-                  "
-                  class="playoff-win-mark"
-                >
-                  TO SEMI-FINAL 2
-                </span>
               </div>
+              <div class="playoff-route-note">
+  <span class="route-winner">
+    ✓ {{ selectedSeason.playoffs.eliminator.winner }} → SEMI-FINAL 2
+  </span>
+  <span class="route-loser" v-if="selectedSeason.playoffs.eliminator?.winner">
+  ✕ {{
+    selectedSeason.playoffs.eliminator.winner === selectedSeason.playoffs.eliminator.team1
+      ? selectedSeason.playoffs.eliminator.team2
+      : selectedSeason.playoffs.eliminator.team1
+  }} → ELIMINATED
+</span>
+</div>
             </article>
 
           </div>
 
           <!-- ROUND 2: SEMI-FINAL 2 -->
           <div class="playoff-round-column playoff-round-middle">
-
-            <div class="playoff-flow-label">
-              SF1 loser + Eliminator winner
-            </div>
 
             <article
               class="playoff-match semi-final-card"
@@ -588,27 +493,25 @@
                     teamKey === 'team1' ? 'score1' : 'score2'
                   ] }}
                 </strong>
-
-                <span
-                  v-if="
-                    selectedSeason.playoffs.semiFinals[1]?.winner ===
-                    selectedSeason.playoffs.semiFinals[1]?.[teamKey]
-                  "
-                  class="playoff-win-mark"
-                >
-                  TO GRAND FINAL
-                </span>
               </div>
+              <div class="playoff-route-note">
+  <span class="route-winner">
+    ✓ {{ selectedSeason.playoffs.semiFinals[1]?.winner }} → GRAND FINAL
+  </span>
+<span class="route-loser" v-if="selectedSeason.playoffs.semiFinals[1]?.winner">
+  ✕ {{
+    selectedSeason.playoffs.semiFinals[1].winner === selectedSeason.playoffs.semiFinals[1].team1
+      ? selectedSeason.playoffs.semiFinals[1].team2
+      : selectedSeason.playoffs.semiFinals[1].team1
+  }} → ELIMINATED
+</span>
+</div>
             </article>
 
           </div>
 
           <!-- ROUND 3: GRAND FINAL -->
           <div class="playoff-round-column playoff-round-final">
-
-            <div class="playoff-flow-label">
-              SF1 winner + SF2 winner
-            </div>
 
             <article
               v-if="selectedSeason.playoffs.grandFinal"
@@ -724,23 +627,58 @@
                 </strong>
 
                 <span
-                  v-if="match.winner && match.winner === match[teamKey]"
-                  class="playoff-win-mark"
-                >
-                  WIN
-                </span>
-              </div>
-              <div
-  v-if="match.nextMatchId"
-  class="playoff-progression"
+  v-if="
+    match.winner &&
+    match.winner === match[teamKey] &&
+    ![4, 6].includes(Number(selectedSeason.seasonNumber))
+  "
+  class="playoff-win-mark"
 >
-  <span class="progression-arrow">↗</span>
+  WIN
+</span>
+              </div>
+              <div v-if="match.winner && match.name !== 'Grand Final' && round.name !== 'GRAND FINAL'" class="playoff-route-note">
+                <span class="route-winner"> ✓ {{ match.winner }} → {{round.name === 'GRAND FINAL' || match.name === 'Grand Final' ? 'CHAMPION' : (match.nextMatchId || 'NEXT ROUND')}} </span>
 
-  <span>
-    WINNER → {{ match.nextMatchId }}
-    <template v-if="match.nextSlot">
-      · SLOT {{ match.nextSlot }}
-    </template>
+  <span class="route-loser">
+    ✕ {{
+      match.winner === match.team1
+        ? match.team2
+        : match.team1
+    }} → {{
+    match.loserNextMatchId ||
+    (round.name === 'TRIPLE THREAT'
+      ? 'CONTINUES'
+      : 'ELIMINATED')
+  }}
+  </span>
+
+</div>
+<div
+  v-if="
+    match.winner &&
+    (
+      round.name === 'GRAND FINAL' ||
+      match.name === 'Grand Final'
+    )
+  "
+  class="champion-panel"
+>
+  <span class="champion-trophy">♛</span>
+
+  <span class="champion-label">
+    {{ selectedSeason.title.toUpperCase() }} CHAMPION
+  </span>
+
+  <strong>{{ match.winner }}</strong>
+
+  <span class="runner-up-label">
+    Runner-up:
+    {{
+      match.winner === match.team1
+        ? match.team2
+        : match.team1
+    }}
   </span>
 </div>
             </article>
@@ -841,7 +779,7 @@
 </template>
 
 <script>
-const API_BASE_URL = "https://battle-of-snipers.onrender.com";
+const API_BASE_URL = "http://localhost:5000";
 export default {
   name: "LiveStandings",
 
@@ -1032,7 +970,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/standings/teams",
+          "http://localhost:5000/api/standings/teams",
           {
             cache: "no-store"
           }
@@ -1062,7 +1000,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/standings/points",
+          "http://localhost:5000/api/standings/points",
           { cache: "no-store" }
         );
         
@@ -1091,7 +1029,7 @@ export default {
       
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/scheduled-matches/for-player",
+          "http://localhost:5000/api/scheduled-matches/for-player",
           {
             method: "POST",
             headers: {
@@ -1222,7 +1160,7 @@ backFromPlayoffs() {
 
       try {
         const response = await fetch(
-          "https://battle-of-snipers.onrender.com/api/verify-ff-uid",
+          "http://localhost:5000/api/verify-ff-uid",
           {
             method: "POST",
             headers: {
@@ -2859,6 +2797,119 @@ backFromPlayoffs() {
   white-space: nowrap;
   text-align: center;
 }
+}
+
+/* SEASON 1 PLAYOFFS - MOBILE LAYOUT */
+@media (max-width: 600px) {
+
+  .season-one-bracket {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    gap: 16px;
+  }
+
+  .season-one-bracket .semi-finals-column {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .season-one-bracket .playoff-match {
+    width: 100%;
+    padding: 14px;
+    box-sizing: border-box;
+  }
+
+  .season-one-bracket .playoff-connectors {
+    display: none;
+  }
+
+  .season-one-bracket .playoff-team-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .season-one-bracket .playoff-team-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    font-size: 13px;
+  }
+
+  .season-one-bracket .grand-final-card {
+    width: 100%;
+    align-self: stretch;
+    margin-top: 4px;
+  }
+
+  .playoff-route-note {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 12px;
+    padding: 10px;
+    background: #17120d;
+    border: 1px solid #49351f;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .route-winner {
+    color: #4ade80;
+  }
+
+  .route-loser {
+    color: #f87171;
+  }
+}
+
+@media (max-width: 600px) {
+  .season-three-bracket {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .season-three-bracket .playoff-round-column {
+    width: 100%;
+    min-width: 0;
+    padding-top: 0;
+    gap: 14px;
+  }
+
+  .season-three-bracket .playoff-match {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px;
+  }
+
+  .season-three-bracket .playoff-team-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .season-three-bracket .playoff-route-note {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 12px;
+    padding: 10px;
+    text-align: center;
+    background: #17120d;
+    border: 1px solid #49351f;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+  }
 }
 
 </style>
