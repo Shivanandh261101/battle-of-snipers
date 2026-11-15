@@ -146,7 +146,7 @@
           <div class="schedule-team-row">
             <div>
               <label for="scheduleTeam1">Team 1</label>
-              <select id="scheduleTeam1" v-model="scheduleTeam1" required>
+              <select id="scheduleTeam1" v-model="scheduleTeam1" @change="scheduleTeam2 = ''" required>
                 <option value="" disabled>Select team</option>
                 <option v-for="team in scheduleGroupTeams" :key="team._id" :value="team._id"> {{ team.teamName }} </option>
               </select>
@@ -156,11 +156,10 @@
               <label for="scheduleTeam2">Team 2</label>
               <select id="scheduleTeam2" v-model="scheduleTeam2" required>
                 <option value="" disabled>Select team</option>
-                <option v-for="team in scheduleGroupTeams" :key="team._id" :value="team._id" :disabled="team._id === scheduleTeam1"> {{ team.teamName }} </option>
+                <option v-for="team in scheduleGroupTeams" :key="team._id" :value="team._id" :disabled="isScheduleOpponentDisabled(team._id)"> {{ team.teamName }} {{ isScheduleOpponentDisabled(team._id) ? '(Already Scheduled)' : '' }} </option>
               </select>
             </div>
           </div>
-
           
 <div class="schedule-date-time-row">
   <div class="schedule-date-field">
@@ -697,6 +696,53 @@ beforeUnmount() {
 },
 
   methods: {
+    isScheduleOpponentDisabled(opponentId) {
+  if (String(opponentId) === String(this.scheduleTeam1)) {
+    return true;
+  }
+
+  if (!this.scheduleTeam1) {
+    return false;
+  }
+
+  const teamCount = this.scheduleGroupTeams.length;
+
+  const maxMatches =
+    this.scheduleGroup === "A"
+      ? this.groupAMatches
+      : this.groupBMatches;
+
+  if (!maxMatches || teamCount < 2) {
+    return false;
+  }
+
+  const maxPairMatches =
+    maxMatches === teamCount - 1 ? 1 :
+    maxMatches === 2 * (teamCount - 1) ? 2 : 0;
+
+  if (!maxPairMatches) {
+    return false;
+  }
+
+  const existingMatches = this.scheduledMatches.filter(match => {
+    if (match.group !== this.scheduleGroup) {
+      return false;
+    }
+
+    return (
+      (
+        String(match.team1Id) === String(this.scheduleTeam1) &&
+        String(match.team2Id) === String(opponentId)
+      ) ||
+      (
+        String(match.team1Id) === String(opponentId) &&
+        String(match.team2Id) === String(this.scheduleTeam1)
+      )
+    );
+  });
+
+  return existingMatches.length >= maxPairMatches;
+},
     resetScheduleTeams() {
       this.scheduleTeam1 = "";
       this.scheduleTeam2 = "";
@@ -957,6 +1003,7 @@ try {
   this.scheduleMessage =
     data.message || "Match scheduled successfully.";
 
+  await this.loadScheduledMatches();  
   // Reset the form after a successful save.
   this.scheduleTeam1 = "";
   this.scheduleTeam2 = "";
@@ -1004,6 +1051,7 @@ try {
 
         await this.loadRegistrations();
         await this.loadTournamentMode();
+        await this.loadScheduledMatches();
       } catch (error) {
         this.errorMessage =
           error.message || "Unable to connect to the server.";
@@ -3132,6 +3180,20 @@ select option {
 .cancel-edit-match-btn:focus-visible {
   outline: 2px solid #f0c75e;
   outline-offset: 3px;
+}
+
+/* Disabled opponent options */
+.schedule-match-form select option:disabled {
+  color: #777 !important;
+  background-color: #242730 !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Disabled select field */
+.schedule-match-form select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 </style>

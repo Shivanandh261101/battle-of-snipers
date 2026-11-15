@@ -364,6 +364,87 @@ if (!settings || settings.registrationOpen) {
     }
   }
   
+  // Validate team match limits and opponent repeat limits
+async function validateScheduledMatchLimit({
+  group,
+  team1Id,
+  team2Id,
+  team1Name,
+  team2Name,
+  excludeMatchId = null
+}) {
+  const settings = await TournamentSettings.findOne();
+
+  if (!settings) {
+    return "Tournament match settings not found.";
+  }
+
+  const maxMatches =
+    group === "A"
+      ? settings.groupAMatches
+      : settings.groupBMatches;
+
+  const teamCount = await Registration.countDocuments({ group });
+
+  const oneRound = teamCount - 1;
+  const twoRounds = 2 * oneRound;
+
+  if (maxMatches !== oneRound && maxMatches !== twoRounds) {
+    return `Please configure valid matches per team for Group ${group}.`;
+  }
+
+  // 12 matches = 1 meeting per opponent
+  // 24 matches = 2 meetings per opponent
+  const maxPairMatches = maxMatches === oneRound ? 1 : 2;
+
+  const excludeFilter = excludeMatchId
+    ? { _id: { $ne: excludeMatchId } }
+    : {};
+
+  // Count matches already scheduled for both teams
+  const team1Matches = await ScheduledMatch.countDocuments({
+    group,
+    ...excludeFilter,
+    $or: [
+      { team1Id },
+      { team2Id: team1Id }
+    ]
+  });
+
+  const team2Matches = await ScheduledMatch.countDocuments({
+    group,
+    ...excludeFilter,
+    $or: [
+      { team1Id: team2Id },
+      { team2Id }
+    ]
+  });
+
+  // Count how many times these exact teams have played
+  const pairMatches = await ScheduledMatch.countDocuments({
+    group,
+    ...excludeFilter,
+    $or: [
+      { team1Id, team2Id },
+      { team1Id: team2Id, team2Id: team1Id }
+    ]
+  });
+
+  if (pairMatches >= maxPairMatches) {
+    return `${team1Name} vs ${team2Name} has already reached the allowed limit of ${maxPairMatches} match(es).`;
+  }
+
+  if (team1Matches >= maxMatches) {
+    return `${team1Name} has already reached its maximum of ${maxMatches} matches.`;
+  }
+
+  if (team2Matches >= maxMatches) {
+    return `${team2Name} has already reached its maximum of ${maxMatches} matches.`;
+  }
+
+  return null;
+}
+
   app.put("/api/admin/tournament-mode", verifyAdmin, async (req, res) => {
     try {
       const {
@@ -604,6 +685,20 @@ app.post("/api/admin/scheduled-matches", verifyAdmin, async (req, res) => {
       team => team._id.toString() === team2Id
     );
 
+    const matchLimitError = await validateScheduledMatchLimit({
+  group,
+  team1Id,
+  team2Id,
+  team1Name: team1.teamName,
+  team2Name: team2.teamName
+});
+
+if (matchLimitError) {
+  return res.status(400).json({
+    message: matchLimitError
+  });
+}
+
     const scheduledMatch = await ScheduledMatch.create({
       group,
       team1Id: team1._id,
@@ -753,6 +848,21 @@ app.put("/api/admin/scheduled-matches/:id", verifyAdmin, async (req, res) => {
     const team2 = teams.find(
       team => team._id.toString() === team2Id
     );
+
+    const matchLimitError = await validateScheduledMatchLimit({
+  group,
+  team1Id,
+  team2Id,
+  team1Name: team1.teamName,
+  team2Name: team2.teamName,
+  excludeMatchId: scheduledMatch._id
+});
+
+if (matchLimitError) {
+  return res.status(400).json({
+    message: matchLimitError
+  });
+}
 
     scheduledMatch.group = group;
     scheduledMatch.team1Id = team1._id;
