@@ -14,7 +14,7 @@
 </div>
 
 <!-- Live standings -->
-<LiveStandings v-else-if="tournamentStarted"/>
+<LiveStandings v-else-if="tournamentStarted || !registrationOpen"/>
 
 <!-- Registration page -->
 <div v-else-if="registrationOpen" class="page">

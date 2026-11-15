@@ -100,14 +100,15 @@ mongoose
         });
       }
       
-      // Standings verification is allowed only after tournament starts.
-      const settings = await TournamentSettings.findOne();
-      if (!settings || !settings.tournamentStarted) {
-        return res.status(403).json({
-          verified: false,
-          message: "The tournament has not started yet."
-        });
-      }
+      // UID verification is allowed once registration is closed.
+const settings = await TournamentSettings.findOne();
+
+if (!settings || settings.registrationOpen) {
+  return res.status(403).json({
+    verified: false,
+    message: "UID verification"
+  });
+}
         
       // Search the existing registration collection.
       const player = await Registration.findOne({
@@ -151,11 +152,11 @@ app.post("/api/scheduled-matches/for-player", async (req, res) => {
 
     const settings = await TournamentSettings.findOne();
 
-    if (!settings || !settings.tournamentStarted) {
-      return res.status(403).json({
-        message: "Scheduled matches are available after the tournament starts."
-      });
-    }
+if (!settings || settings.registrationOpen) {
+  return res.status(403).json({
+    message: "Scheduled matches are available after registration closes."
+  });
+}
 
     const player = await Registration.findOne({
       ffUid: ffUid.trim()

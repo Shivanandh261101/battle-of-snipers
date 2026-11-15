@@ -41,20 +41,33 @@
           <div v-else class="scheduled-matches-list">
             <div v-for="match in scheduledMatches" :key="match._id" class="scheduled-match-card">
               <div class="scheduled-match-header">
-                <span>Group {{ match.group }}</span>
-                <span>
-  {{
-    new Date(match.matchDate).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }}
-</span>
-              </div>
+  <span>Group {{ match.group }}</span>
+
+  <span class="match-date-info">
+    <strong
+      class="match-relative-day"
+      :class="{
+        'match-next-day': getMatchDayLabel(match.matchDate) === 'Tomorrow',
+        'match-today': getMatchDayLabel(match.matchDate) === 'Today'
+      }"
+    >
+      {{ getMatchDayLabel(match.matchDate) }}
+    </strong>
+
+    <span class="match-exact-date">
+      {{
+        new Date(match.matchDate).toLocaleString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+      }}
+    </span>
+  </span>
+</div>
               <div class="scheduled-match-teams">
 
   <div class="scheduled-team scheduled-team-left">
@@ -1079,6 +1092,40 @@ export default {
       }
     },
     
+    getMatchDayLabel(matchDate) {
+  if (!matchDate) return "Date not available";
+
+  const matchDay = new Date(matchDate);
+
+  if (Number.isNaN(matchDay.getTime())) {
+    return "Date not available";
+  }
+
+  const today = new Date();
+
+  const todayUtc = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  const matchUtc = Date.UTC(
+    matchDay.getFullYear(),
+    matchDay.getMonth(),
+    matchDay.getDate()
+  );
+
+  const daysAway = Math.round(
+    (matchUtc - todayUtc) / 86400000
+  );
+
+  if (daysAway < 0) return "Past match";
+  if (daysAway === 0) return "Today";
+  if (daysAway === 1) return "Tomorrow";
+
+  return `${daysAway} days later`;
+},
+
     async loadScheduledMatches() {
       this.scheduledMatchesLoading = true;
       this.scheduledMatchesError = "";
@@ -1646,6 +1693,40 @@ backFromPlayoffs() {
   gap: 8px;
   color: #ffcc00;
   font-size: 13px;
+}
+
+.match-date-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  text-align: right;
+}
+
+.match-relative-day {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  color: #ffcc00;
+  background: rgba(255, 204, 0, 0.13);
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.match-relative-day.match-next-day {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.13);
+}
+
+.match-relative-day.match-today {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.13);
+}
+
+.match-exact-date {
+  color: #c5ccd8;
+  font-size: 12px;
 }
 
 .scheduled-match-teams {
