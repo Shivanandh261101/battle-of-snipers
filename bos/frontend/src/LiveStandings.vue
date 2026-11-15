@@ -106,6 +106,14 @@
           </button>
         </div>
         
+        <!-- SEASON 7 PLAYOFFS BUTTON -->
+        <div class="past-seasons-entry">
+          <button type="button" class="past-seasons-button" @click="openSeason7Playoffs">
+            <span class="past-seasons-icon">🏆</span>
+            <span><strong>SEASON 7 PLAYOFFS</strong><small>View Season 7 playoff stage</small></span>
+          </button>
+        </div>
+
         <div class="player-group-assignment">
           <p class="group-assignment-label">YOUR TEAM GROUP</p>
           <h2 v-if="playerGroup"> YOU ARE ASSIGNED TO <span>GROUP {{ playerGroup }}</span> </h2>
@@ -185,6 +193,14 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- SEASON 7 PLAYOFFS PAGE -->
+      <div v-else-if="seasonView === 'season7-playoffs'" class="season-page">
+        <button type="button" class="season-back-button" @click="backToDashboard"> Back </button>
+        <h2>🏆 SEASON 7 PLAYOFFS</h2>
+        <p class="season-page-subtitle"> Season 7 Playoff Stage </p>
+        <p>Playoff details will be added here.</p>
       </div>
 
       <!-- SEASONS LIST PAGE -->
@@ -1217,6 +1233,11 @@ export default {
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
     
+    openSeason7Playoffs() {
+  this.seasonView = "season7-playoffs";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+},
+
     backToDashboard() {
       this.seasonView = "dashboard";
       window.scrollTo({ top: 0, behavior: "smooth" });
