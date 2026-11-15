@@ -13,6 +13,10 @@
       <form @submit.prevent="verifyUid">
         <input v-model="ffUid" type="text" inputmode="numeric" maxlength="20" placeholder="Enter Free Fire UID" autocomplete="off" required 
         @input="ffUid = ffUid.replace(/[^0-9]/g, '')" />
+        <label class="remember-uid">  
+          <input type="checkbox" v-model="rememberUid" @change="handleRememberChange"/>  
+          <span>Remember Me</span>
+        </label>
         <button type="submit" :disabled="loading">
           {{ loading ? "VERIFYING..." : "VERIFY & VIEW STANDINGS" }}
         </button>
@@ -40,34 +44,39 @@
           <p v-else-if="scheduledMatches.length === 0"> No scheduled matches available yet. </p>
           <div v-else class="scheduled-matches-list">
             <div v-for="match in scheduledMatches" :key="match._id" class="scheduled-match-card">
-              <div class="scheduled-match-header">
-  <span>Group {{ match.group }}</span>
-
-  <span class="match-date-info">
-    <strong
-      class="match-relative-day"
-      :class="{
-        'match-next-day': getMatchDayLabel(match.matchDate) === 'Tomorrow',
-        'match-today': getMatchDayLabel(match.matchDate) === 'Today'
-      }"
-    >
-      {{ getMatchDayLabel(match.matchDate) }}
-    </strong>
-
-    <span class="match-exact-date">
-      {{
-        new Date(match.matchDate).toLocaleString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        })
-      }}
-    </span>
+              
+<div class="scheduled-match-header">
+  <!-- LEFT: GROUP -->
+  <span class="match-group">
+    Group {{ match.group }}
   </span>
+
+  <!-- CENTER: EXACT DATE AND TIME -->
+  <span class="match-exact-date">
+    {{
+      new Date(match.matchDate).toLocaleString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    }}
+  </span>
+
+  <!-- RIGHT: TOMORROW / TODAY / PAST -->
+  <strong
+    class="match-relative-day"
+    :class="{
+      'match-next-day': getMatchDayLabel(match.matchDate) === 'Tomorrow',
+      'match-today': getMatchDayLabel(match.matchDate) === 'Today'
+    }"
+  >
+    {{ getMatchDayLabel(match.matchDate) }}
+  </strong>
 </div>
+
               <div class="scheduled-match-teams">
 
   <div class="scheduled-team scheduled-team-left">
@@ -871,6 +880,7 @@ export default {
   data() {
     return {
       ffUid: "",
+      rememberUid: false,
       verified: false,
       loading: false,
       message: "",
@@ -906,6 +916,19 @@ export default {
       matchSearchQuery: ""
     };
   },
+
+  mounted() {
+  try {
+    const savedUid = localStorage.getItem("bos_remembered_ff_uid");
+
+    if (savedUid) {
+      this.ffUid = savedUid;
+      this.rememberUid = true;
+    }
+  } catch (error) {
+    console.error("Unable to load remembered UID:", error);
+  }
+},
 
   beforeUnmount() {
     if (this.pointsInterval) {
@@ -1166,9 +1189,32 @@ export default {
           throw new Error(
             result.message || "Could not load scheduled matches."
           );
-        }
+        }        
         
-        this.scheduledMatches = result.scheduledMatches || [];
+const matches = result.scheduledMatches || [];
+
+this.scheduledMatches = matches.sort((a, b) => {
+  const dateA = new Date(a.matchDate).getTime();
+  const dateB = new Date(b.matchDate).getTime();
+
+  const now = Date.now();
+
+  const aIsPast = dateA < now;
+  const bIsPast = dateB < now;
+
+  // Upcoming matches first
+  if (!aIsPast && bIsPast) return -1;
+  if (aIsPast && !bIsPast) return 1;
+
+  // Upcoming: nearest match first
+  if (!aIsPast && !bIsPast) {
+    return dateA - dateB;
+  }
+
+  // Past: most recent match first
+  return dateB - dateA;
+});
+
       } catch (error) {
         this.scheduledMatchesError = error.message || "Unable to load scheduled matches.";
       } finally {
@@ -1275,6 +1321,16 @@ backFromPlayoffs() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 },
 
+    handleRememberChange() {
+  if (!this.rememberUid) {
+    try {
+      localStorage.removeItem("bos_remembered_ff_uid");
+    } catch (error) {
+      console.error("Unable to remove remembered UID:", error);
+    }
+  }
+},
+
     async verifyUid() {
       if (this.loading) return;
 
@@ -1305,10 +1361,25 @@ backFromPlayoffs() {
         }
 
         this.verifiedUid = result.ffUid;
-        this.playerName = result.ffName;
-        this.teamName = result.teamName;
-        this.playerGroup = result.group || null;
-        this.verified = true;
+this.playerName = result.ffName;
+this.teamName = result.teamName;
+this.playerGroup = result.group || null;
+this.verified = true;
+
+// Remember UID only when checkbox is selected
+try {
+  if (this.rememberUid) {
+    localStorage.setItem(
+      "bos_remembered_ff_uid",
+      result.ffUid || this.ffUid.trim()
+    );
+  } else {
+    localStorage.removeItem("bos_remembered_ff_uid");
+  }
+} catch (error) {
+  console.error("Unable to save remembered UID:", error);
+}
+
         this.loadPointsTable();
         this.loadScheduledMatches();
         this.loadSeasons();
@@ -1335,7 +1406,7 @@ backFromPlayoffs() {
     },
 
     resetVerification() {
-      this.ffUid = "";
+      this.ffUid = this.rememberUid ? localStorage.getItem("bos_remembered_ff_uid") || "" : "";
       this.verified = false;
       this.message = "";
       this.verifiedUid = "";
@@ -1405,6 +1476,35 @@ backFromPlayoffs() {
 
 .standings-card input:focus {
   border-color: #ffb000;
+}
+
+.remember-uid {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  margin: 8px auto 14px;
+  color: #ffffff;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.remember-uid input {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  accent-color: #ffb000;
+  cursor: pointer;
+}
+
+.remember-uid span {
+  color: #ffffff;
 }
 
 .standings-card button {
@@ -1706,22 +1806,40 @@ backFromPlayoffs() {
   border: 1px solid rgba(255, 204, 0, 0.3);
 }
 
+
 .scheduled-match-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   gap: 8px;
   color: #ffcc00;
   font-size: 13px;
 }
 
-.match-date-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  text-align: right;
+.match-group {
+  justify-self: start;
+  font-weight: 700;
+}
+
+.match-exact-date {
+  justify-self: center;
+  text-align: center;
+  color: #ffffff;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.match-relative-day {
+  justify-self: end;
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  color: #ffcc00;
+  background: rgba(255, 204, 0, 0.13);
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .match-relative-day {

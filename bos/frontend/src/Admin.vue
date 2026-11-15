@@ -156,7 +156,7 @@
               <label for="scheduleTeam2">Team 2</label>
               <select id="scheduleTeam2" v-model="scheduleTeam2" required>
                 <option value="" disabled>Select team</option>
-                <option v-for="team in scheduleGroupTeams" :key="team._id" :value="team._id" :disabled="isScheduleOpponentDisabled(team._id)"> {{ team.teamName }} {{ isScheduleOpponentDisabled(team._id) ? '(Already Scheduled)' : '' }} </option>
+                <option v-for="team in scheduleGroupTeams.filter(team => String(team._id) !== String(scheduleTeam1))" :key="team._id" :value="team._id" :disabled="isScheduleOpponentDisabled(team._id)"> {{ team.teamName }} {{ isScheduleOpponentDisabled(team._id) ? '(Already Scheduled)' : '' }} </option>
               </select>
             </div>
           </div>
@@ -231,7 +231,7 @@
                 
                 <label for="editScheduleTeam2">Team 2</label>
                 <select id="editScheduleTeam2" v-model="editScheduleTeam2" required>
-                  <option v-for="team in editScheduleGroupTeams" :key="team._id" :value="team._id"> {{ team.teamName }} </option>
+                  <option v-for="team in editScheduleGroupTeams" :key="team._id" :value="team._id" :disabled="isEditOpponentDisabled(team._id)"> {{ team.teamName }} {{ isEditOpponentDisabled(team._id) ? '(Already Scheduled)' : '' }} </option>
                 </select>
                 
                 <label for="editScheduleAssignedTo">Assigned To</label>
@@ -743,6 +743,61 @@ beforeUnmount() {
 
   return existingMatches.length >= maxPairMatches;
 },
+isEditOpponentDisabled(opponentId) {
+  if (String(opponentId) === String(this.editScheduleTeam1)) {
+    return true;
+  }
+
+  if (!this.editScheduleTeam1) {
+    return false;
+  }
+
+  const teamCount = this.editScheduleGroupTeams.length;
+
+  const maxMatches =
+    this.editScheduleGroup === "A"
+      ? this.groupAMatches
+      : this.groupBMatches;
+
+  if (!maxMatches || teamCount < 2) {
+    return false;
+  }
+
+  const maxPairMatches =
+    maxMatches === teamCount - 1 ? 1 :
+    maxMatches === 2 * (teamCount - 1) ? 2 : 0;
+
+  if (!maxPairMatches) {
+    return false;
+  }
+
+  const existingMatches = this.scheduledMatches.filter(match => {
+    if (match.group !== this.editScheduleGroup) {
+      return false;
+    }
+
+    // Exclude the match currently being edited
+    if (
+      String(match._id) === String(this.editingScheduledMatchId)
+    ) {
+      return false;
+    }
+
+    return (
+      (
+        String(match.team1Id) === String(this.editScheduleTeam1) &&
+        String(match.team2Id) === String(opponentId)
+      ) ||
+      (
+        String(match.team1Id) === String(opponentId) &&
+        String(match.team2Id) === String(this.editScheduleTeam1)
+      )
+    );
+  });
+
+  return existingMatches.length >= maxPairMatches;
+},
+
     resetScheduleTeams() {
       this.scheduleTeam1 = "";
       this.scheduleTeam2 = "";
