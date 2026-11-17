@@ -1560,6 +1560,161 @@ for (const group of ["A", "B"]) {
 });
 
 
+app.get("/api/season7/playoffs", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+
+    const registrations = await Registration.find({
+      group: { $in: ["A", "B"] }
+    })
+      .select("_id teamName teamLogo group")
+      .lean();
+
+    const results = await MatchResults.find({
+      group: { $in: ["A", "B"] }
+    }).lean();
+
+    const settings = await TournamentSettings.findOne().lean();
+
+    const groups = { A: [], B: [] };
+
+    for (const group of ["A", "B"]) {
+      const savedResult = results.find(
+        result => result.group === group
+      );
+
+      const savedTeams = savedResult?.teams || [];
+
+      groups[group] = registrations
+        .filter(team => team.group === group)
+        .map(team => {
+          const score = savedTeams.find(
+            saved =>
+              saved.registrationId?.toString() ===
+              team._id.toString()
+          );
+
+          return {
+            _id: team._id,
+            teamName: team.teamName,
+            teamLogo: team.teamLogo,
+            played: (score?.won || 0) + (score?.lost || 0),
+            won: score?.won || 0,
+            lost: score?.lost || 0,
+            roundsPoints: score?.roundsPoints || 0,
+            totalPoints: score?.totalPoints || 0
+          };
+        })
+        .sort((a, b) =>
+          b.totalPoints - a.totalPoints ||
+          b.roundsPoints - a.roundsPoints ||
+          a.teamName.localeCompare(b.teamName)
+        );
+    }
+
+    const requiredA = settings?.groupAMatches;
+    const requiredB = settings?.groupBMatches;
+
+    const unlocked =
+      groups.A.length === 13 &&
+      groups.B.length === 13 &&
+      Number.isInteger(requiredA) &&
+      Number.isInteger(requiredB) &&
+      groups.A.every(team => team.played === requiredA) &&
+      groups.B.every(team => team.played === requiredB);
+
+    if (!unlocked) {
+      return res.json({
+        unlocked: false,
+        message: "All teams must complete their league matches.",
+        requiredMatches: {
+          groupA: requiredA,
+          groupB: requiredB
+        },
+        eliminators: Array.from(
+          { length: 8 },
+          (_, i) => ({
+            match: `E${i + 1}`,
+            team1: "TBD",
+            team2: "TBD",
+            score1: null,
+            score2: null,
+            winner: null
+          })
+        ),
+        semiFinals: Array.from(
+          { length: 4 },
+          (_, i) => ({
+            match: `SF${i + 1}`,
+            team1: "TBD",
+            team2: "TBD",
+            winner: null
+          })
+        ),
+        finals: [
+          {
+            match: "Final 1",
+            team1: "TBD",
+            team2: "TBD",
+            winner: null
+          },
+          {
+            match: "Final 2",
+            team1: "TBD",
+            team2: "TBD",
+            winner: null
+          }
+        ],
+        grandFinal: {
+          team1: "TBD",
+          team2: "TBD",
+          winner: null
+        }
+      });
+    }
+
+    const eliminators = Array.from(
+      { length: 8 },
+      (_, i) => ({
+        match: `E${i + 1}`,
+        team1: groups.A[i].teamName,
+        team2: groups.B[7 - i].teamName,
+        score1: null,
+        score2: null,
+        winner: null
+      })
+    );
+
+    return res.json({
+      unlocked: true,
+      message: "Playoffs unlocked.",
+      eliminators,
+      semiFinals: [
+        { match: "SF1", team1: "E1 Winner", team2: "E5 Winner", winner: null },
+        { match: "SF2", team1: "E2 Winner", team2: "E6 Winner", winner: null },
+        { match: "SF3", team1: "E3 Winner", team2: "E7 Winner", winner: null },
+        { match: "SF4", team1: "E4 Winner", team2: "E8 Winner", winner: null }
+      ],
+      finals: [
+        { match: "Final 1", team1: "SF1 Winner", team2: "SF4 Winner", winner: null },
+        { match: "Final 2", team1: "SF2 Winner", team2: "SF3 Winner", winner: null }
+      ],
+      grandFinal: {
+        team1: "Final 1 Winner",
+        team2: "Final 2 Winner",
+        winner: null
+      }
+    });
+
+  } catch (error) {
+    console.error("Season 7 playoffs error:", error);
+
+    return res.status(500).json({
+      message: "Could not load Season 7 playoffs."
+    });
+  }
+});
+
 app.post("/api/admin/standings/:group/undo", verifyAdmin, async (req, res) => {
   try {
     const group = req.params.group;

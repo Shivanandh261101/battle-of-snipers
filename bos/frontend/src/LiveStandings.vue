@@ -204,13 +204,178 @@
         </div>
       </div>
 
-      <!-- SEASON 7 PLAYOFFS PAGE -->
-      <div v-else-if="seasonView === 'season7-playoffs'" class="season-page">
-        <button type="button" class="season-back-button" @click="backToDashboard"> Back </button>
-        <h2>🏆 SEASON 7 PLAYOFFS</h2>
-        <p class="season-page-subtitle"> Season 7 Playoff Stage </p>
-        <p>Playoff details will be added here.</p>
+      
+<!-- SEASON 7 PLAYOFFS PAGE -->
+<div
+  v-else-if="seasonView === 'season7-playoffs'"
+  class="season-page playoff-section"
+>
+  <button
+    type="button"
+    class="season-back-button"
+    @click="backToDashboard"
+  >
+    Back
+  </button>
+
+  <div class="playoff-heading">
+    <span class="playoff-kicker">BATTLE OF SNIPERS</span>
+    <h2>PLAYOFF BRACKET</h2>
+    <p>BOS SEASON 7 · ROAD TO CHAMPION</p>
+  </div>
+
+  <p v-if="season7PlayoffsLoading">
+    Loading Season 7 playoffs...
+  </p>
+
+  <p v-else-if="season7PlayoffsError" class="error-message">
+    {{ season7PlayoffsError }}
+  </p>
+
+  <template v-else>
+
+    <div v-if="!season7Playoffs.unlocked" class="playoff-match">
+      <h3>LEAGUE STAGE IN PROGRESS</h3>
+      <p>All 26 teams must complete their required league matches.</p>
+      <p>Playoff qualification: TBD</p>
+    </div>
+
+    <!-- ELIMINATORS -->
+    <h3 class="playoff-stage-heading">ELIMINATORS</h3>
+
+    <div class="season7-match-grid">
+      <article
+        v-for="match in season7Playoffs.eliminators"
+        :key="match.match"
+        class="playoff-match"
+      >
+        <div class="playoff-card-heading">
+          <span>Eliminator {{ match.match.replace('E', '') }}</span>
+          <span class="playoff-format">BO1</span>
+        </div>
+
+        <div
+          v-for="teamKey in ['team1', 'team2']"
+          :key="teamKey"
+          class="playoff-team-row"
+        >
+          <span class="playoff-team-name">
+            {{ match.team1 === 'TBD' || !season7Playoffs.unlocked
+              ? 'TBD'
+              : match[teamKey] }}
+          </span>
+          <strong class="playoff-score">
+            {{ match[teamKey === 'team1' ? 'score1' : 'score2'] ?? '0' }}
+          </strong>
+        </div>
+
+        <div class="playoff-route-note">
+          <span class="route-winner">
+            ✓ {{ match.winner || 'TBD' }} → TBD
+          </span>
+          <span class="route-loser">
+            ✕ TBD → ELIMINATED
+          </span>
+        </div>
+      </article>
+    </div>
+
+    <!-- SEMI FINALS -->
+    <h3 class="playoff-stage-heading">SEMI FINALS</h3>
+
+    <div class="season7-match-grid">
+      <article
+        v-for="match in season7Playoffs.semiFinals"
+        :key="match.match"
+        class="playoff-match"
+      >
+        <div class="playoff-card-heading">
+          <span>{{ match.match }}</span>
+          <span class="playoff-format">BO1</span>
+        </div>
+
+        <div class="playoff-team-row">
+          <span>{{ match.team1 }}</span>
+          <strong>0</strong>
+        </div>
+        <div class="playoff-team-row">
+          <span>{{ match.team2 }}</span>
+          <strong>0</strong>
+        </div>
+
+        <div class="playoff-route-note">
+          <span class="route-winner">
+            ✓ {{ match.winner || 'TBD' }} → TBD
+          </span>
+          <span class="route-loser">
+            ✕ TBD → ELIMINATED
+          </span>
+        </div>
+      </article>
+    </div>
+
+    <!-- FINALS -->
+    <h3 class="playoff-stage-heading">FINALS</h3>
+
+    <div class="season7-match-grid">
+      <article
+        v-for="match in season7Playoffs.finals"
+        :key="match.match"
+        class="playoff-match"
+      >
+        <div class="playoff-card-heading">
+          <span>{{ match.match }}</span>
+          <span class="playoff-format">BO1</span>
+        </div>
+
+        <div class="playoff-team-row">
+          <span>{{ match.team1 }}</span>
+          <strong>0</strong>
+        </div>
+        <div class="playoff-team-row">
+          <span>{{ match.team2 }}</span>
+          <strong>0</strong>
+        </div>
+
+        <div class="playoff-route-note">
+          <span class="route-winner">
+            ✓ {{ match.winner || 'TBD' }} → GRAND FINAL
+          </span>
+          <span class="route-loser">
+            ✕ TBD → ELIMINATED
+          </span>
+        </div>
+      </article>
+    </div>
+
+    <!-- GRAND FINAL -->
+    <h3 class="playoff-stage-heading">GRAND FINAL</h3>
+
+    <article class="playoff-match grand-final-card">
+      <div class="playoff-card-heading grand-final-heading">
+        <span>♛ GRAND FINAL ♛</span>
+        <span class="playoff-format">BO1</span>
       </div>
+
+      <div class="final-team-row">
+        <span>{{ season7Playoffs.grandFinal?.team1 || 'TBD' }}</span>
+        <strong>0</strong>
+      </div>
+
+      <div class="final-team-row">
+        <span>{{ season7Playoffs.grandFinal?.team2 || 'TBD' }}</span>
+        <strong>0</strong>
+      </div>
+
+      <div class="playoff-route-note">
+        <span class="route-winner">
+          ✓ {{ season7Playoffs.grandFinal?.winner || 'TBD' }} → CHAMPION
+        </span>
+      </div>
+    </article>
+
+  </template>
+</div>
 
       <!-- SEASONS LIST PAGE -->
       <div v-else-if="seasonView === 'seasons'" class="season-page">
@@ -913,7 +1078,17 @@ export default {
       seasonDetailsError: "",
       seasonView: "dashboard",
       playoffReturnView: "details",
-      matchSearchQuery: ""
+      matchSearchQuery: "",
+
+season7Playoffs: {
+  unlocked: false,
+  eliminators: [],
+  semiFinals: [],
+  finals: [],
+  grandFinal: null
+},
+season7PlayoffsLoading: false,
+season7PlayoffsError: ""
     };
   },
 
@@ -1278,10 +1453,51 @@ this.scheduledMatches = matches.sort((a, b) => {
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
-    
-    openSeason7Playoffs() {
+
+async loadSeason7Playoffs(silent = false) {
+  if (!silent) {
+    this.season7PlayoffsLoading = true;
+    this.season7PlayoffsError = "";
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/season7/playoffs`,
+      { cache: "no-store" }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.message || "Could not load Season 7 playoffs."
+      );
+    }
+
+    this.season7Playoffs = result;
+    this.season7PlayoffsError = "";
+
+  } catch (error) {
+    // Background refresh should not disturb existing content.
+    if (!silent) {
+      this.season7PlayoffsError =
+        error.message || "Unable to load playoffs.";
+    }
+  } finally {
+    if (!silent) {
+      this.season7PlayoffsLoading = false;
+    }
+  }
+},
+
+async openSeason7Playoffs() {
   this.seasonView = "season7-playoffs";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  await this.loadSeason7Playoffs();
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 },
 
     backToDashboard() {
@@ -1389,10 +1605,14 @@ try {
         }
         
         this.pointsInterval = setInterval(() => {
-          if (this.verified) {
-            this.loadPointsTable();
-          }
-        }, 5000);
+  if (this.verified) {
+    this.loadPointsTable();
+
+    if (this.seasonView === "season7-playoffs") {
+      this.loadSeason7Playoffs(true);
+    }
+  }
+}, 5000);
       } catch (error) {
         this.message = error.message || "Unable to verify UID. Try again.";
       } finally {
@@ -3397,6 +3617,37 @@ try {
 
 .rank-down {
   color: #ef4444;
+}
+
+
+/* SEASON 7 PLAYOFF BRACKET */
+
+.playoff-stage-heading {
+  margin: 28px 0 16px;
+  color: #ffbf47;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.season7-match-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.season7-match-grid .playoff-match {
+  min-width: 0;
+}
+
+.season7-match-grid .playoff-team-row {
+  margin-top: 7px;
+}
+
+@media (max-width: 600px) {
+  .season7-match-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 </style>
