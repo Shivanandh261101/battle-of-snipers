@@ -39,30 +39,29 @@
         </div>
         <div class="scheduled-matches-section">
           <h2>Scheduled Matches</h2>
+          <div class="scheduled-matches-tabs">
+            <button type="button" :class="{ active: activeMatchTab === 'upcoming' }" @click="activeMatchTab = 'upcoming'"> Upcoming </button>
+            <button type="button" :class="{ active: activeMatchTab === 'past' }" @click="activeMatchTab = 'past'"> Past </button>
+          </div>
           <p v-if="scheduledMatchesLoading"> Loading scheduled matches... </p>
           <p v-else-if="scheduledMatchesError" class="error-message"> {{ scheduledMatchesError }} </p>
-          <p v-else-if="scheduledMatches.length === 0"> No scheduled matches available yet. </p>
+          <p v-else-if="filteredScheduledMatches.length === 0"> {{ activeMatchTab === 'upcoming' ? 'No upcoming matches.' : 'No past matches.' }} </p>
           <div v-else class="scheduled-matches-list">
-            <div v-for="match in scheduledMatches" :key="match._id" class="scheduled-match-card">
-              
-<div class="scheduled-match-header">
-  <!-- LEFT: GROUP -->
-  <span class="match-group">
-    Group {{ match.group }}
-  </span>
-
-  <!-- CENTER: EXACT DATE AND TIME -->
-  <span class="match-exact-date">
-    {{
-      new Date(match.matchDate).toLocaleString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      })
-    }}
+            <div v-for="match in filteredScheduledMatches" :key="match._id" class="scheduled-match-card">
+              <div class="scheduled-match-header">
+                <!-- LEFT: GROUP -->
+                <span class="match-group"> Group {{ match.group }} </span>
+                <!-- CENTER: EXACT DATE AND TIME -->
+                <span class="match-exact-date"> {{ 
+                new Date(match.matchDate).toLocaleString('en-GB', {                  
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+               })
+               }}
   </span>
 
   <!-- RIGHT: TOMORROW / TODAY / PAST -->
@@ -1105,6 +1104,7 @@ export default {
       scheduledMatches: [],
       scheduledMatchesLoading: false,
       scheduledMatchesError: "",
+      activeMatchTab: "upcoming",
       seasons: [],
       seasonsLoading: false,
       seasonsError: "",
@@ -1217,7 +1217,20 @@ season7PlayoffsError: ""
         return searchableText.includes(query);
       }
     );
+  },
+  filteredScheduledMatches() {
+  const now = Date.now();
+
+  if (this.activeMatchTab === "upcoming") {
+    return this.scheduledMatches.filter(
+      match => new Date(match.matchDate).getTime() >= now
+    );
   }
+
+  return this.scheduledMatches.filter(
+    match => new Date(match.matchDate).getTime() < now
+  );
+}
 },
 
   methods: {  
@@ -2047,6 +2060,29 @@ try {
   margin: 0 0 18px;
   color: #ffcc00;
   font-size: 22px;
+}
+
+.scheduled-matches-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.scheduled-matches-tabs button {
+  flex: 1;
+  padding: 11px;
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  border-radius: 8px;
+  background: #252530;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scheduled-matches-tabs button.active {
+  background: #ffcc00;
+  color: #111;
+  border-color: #ffcc00;
 }
 
 .scheduled-matches-list {
