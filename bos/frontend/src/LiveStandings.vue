@@ -351,28 +351,64 @@
     <!-- GRAND FINAL -->
     <h3 class="playoff-stage-heading">GRAND FINAL</h3>
 
-    <article class="playoff-match grand-final-card">
-      <div class="playoff-card-heading grand-final-heading">
-        <span>♛ GRAND FINAL ♛</span>
-        <span class="playoff-format">BO1</span>
-      </div>
+<!-- SEASON 7 GRAND FINAL -->
+<article class="playoff-match grand-final-card">
 
-      <div class="final-team-row">
-        <span>{{ season7Playoffs.grandFinal?.team1 || 'TBD' }}</span>
-        <strong>0</strong>
-      </div>
+  <div class="playoff-card-heading grand-final-heading">
+    <span>Grand Final</span>
+    <span class="playoff-format">BO1</span>
+  </div>
 
-      <div class="final-team-row">
-        <span>{{ season7Playoffs.grandFinal?.team2 || 'TBD' }}</span>
-        <strong>0</strong>
-      </div>
+  <div
+    v-for="teamKey in ['team1', 'team2']"
+    :key="teamKey"
+    class="final-team-row"
+    :class="{
+      'playoff-team-winner':
+        season7Playoffs.grandFinal?.winner ===
+        season7Playoffs.grandFinal?.[teamKey]
+    }"
+  >
+    <span>
+      {{ season7Playoffs.grandFinal?.[teamKey] || 'TBD' }}
+    </span>
 
-      <div class="playoff-route-note">
-        <span class="route-winner">
-          ✓ {{ season7Playoffs.grandFinal?.winner || 'TBD' }} → CHAMPION
-        </span>
-      </div>
-    </article>
+    <strong>
+      {{
+        season7Playoffs.grandFinal?.[
+          teamKey === 'team1' ? 'score1' : 'score2'
+        ] ?? 0
+      }}
+    </strong>
+  </div>
+
+  <div class="champion-panel">
+    <span class="champion-trophy">♛</span>
+
+    <span class="champion-label">
+      BOS SEASON 7 CHAMPION
+    </span>
+
+    <strong>
+      {{ season7Playoffs.grandFinal?.winner || 'TBD' }}
+    </strong>
+
+    <span class="runner-up-label">
+      Runner-up:
+      {{
+        season7Playoffs.grandFinal?.winner
+          ? (
+              season7Playoffs.grandFinal.winner ===
+              season7Playoffs.grandFinal.team1
+                ? season7Playoffs.grandFinal.team2
+                : season7Playoffs.grandFinal.team1
+            )
+          : 'TBD'
+      }}
+    </span>
+  </div>
+
+</article>
 
   </template>
 </div>
