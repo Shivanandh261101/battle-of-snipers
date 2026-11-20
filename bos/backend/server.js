@@ -160,7 +160,7 @@ if (!settings || settings.registrationOpen) {
 
     const player = await Registration.findOne({
       ffUid: ffUid.trim()
-    }).select("_id teamName");
+    }).select("_id teamName group");
 
     if (!player) {
       return res.status(404).json({
@@ -183,9 +183,71 @@ if (!settings || settings.registrationOpen) {
     select: "teamLogo"
   })
   .sort({ matchDate: 1 })
-  .lean();
+.lean();
 
-    return res.json({ scheduledMatches });
+const matchResult = await MatchResults.findOne({
+  group: player.group
+}).lean();
+
+const history = matchResult?.history || [];
+
+const matchesWithScores = scheduledMatches.map(match => {
+  const team1Id = match.team1Id?._id?.toString() || match.team1Id?.toString();
+  const team2Id = match.team2Id?._id?.toString() || match.team2Id?.toString();
+
+  const event = [...history].reverse().find(item => {
+    if (item.scheduledMatchId) {
+      return item.scheduledMatchId.toString() === match._id.toString();
+    }
+
+    const eventTeam1 = item.type === "tieBreaker"
+      ? item.team1Id?.toString()
+      : item.winnerId?.toString();
+
+    const eventTeam2 = item.type === "tieBreaker"
+      ? item.team2Id?.toString()
+      : item.loserId?.toString();
+
+    return (
+      (eventTeam1 === team1Id && eventTeam2 === team2Id) ||
+      (eventTeam1 === team2Id && eventTeam2 === team1Id)
+    );
+  });
+
+  if (!event) {
+    return {
+      ...match,
+      result: null
+    };
+  }
+
+  if (event.type === "tieBreaker") {
+    return {
+      ...match,
+      result: {
+        type: "tieBreaker",
+        team1Score: -10,
+        team2Score: -10
+      }
+    };
+  }
+
+  const winnerIsTeam1 = event.winnerId.toString() === team1Id;
+
+  return {
+    ...match,
+    result: {
+      type: "match",
+      team1Score: winnerIsTeam1 ? 8 : event.loserRounds,
+      team2Score: winnerIsTeam1 ? event.loserRounds : 8,
+      winnerId: event.winnerId
+    }
+  };
+});
+
+return res.json({
+  scheduledMatches: matchesWithScores
+});
   } catch (error) {
     console.error("Loading scheduled matches failed:", error.message);
 
@@ -1326,6 +1388,20 @@ app.post("/api/admin/standings/match", verifyAdmin, async (req, res) => {
       });
     }
     
+    const scheduledMatch = await ScheduledMatch.findOne({
+  group,
+  $or: [
+    {
+      team1Id: winner.registrationId,
+      team2Id: loser.registrationId
+    },
+    {
+      team1Id: loser.registrationId,
+      team2Id: winner.registrationId
+    }
+  ]
+});
+
     const roundPoints = ROUND_POINTS[loserRounds];
 
     // Preserve the original Season 6 scoring rules.
@@ -1345,6 +1421,7 @@ app.post("/api/admin/standings/match", verifyAdmin, async (req, res) => {
       winnerRoundPoints: roundPoints,
       loserRoundPoints: -roundPoints,
       winnerTotalPoints: winner.totalPoints,
+      scheduledMatchId: scheduledMatch?._id || null,
       loserTotalPoints: loser.totalPoints
     });
 
@@ -1450,6 +1527,20 @@ app.post("/api/admin/standings/tie-breaker", verifyAdmin, async (req, res) => {
       });
     }
 
+    const scheduledMatch = await ScheduledMatch.findOne({
+  group,
+  $or: [
+    {
+      team1Id: team1.registrationId,
+      team2Id: team2.registrationId
+    },
+    {
+      team1Id: team2.registrationId,
+      team2Id: team1.registrationId
+    }
+  ]
+});
+
     // Apply the tie-breaker penalty to both teams.
     team1.lost += 1;
     team1.roundsPoints -= 10;
@@ -1461,6 +1552,7 @@ app.post("/api/admin/standings/tie-breaker", verifyAdmin, async (req, res) => {
     result.history.push({
       type: "tieBreaker",
       group,
+      scheduledMatchId: scheduledMatch?._id || null,
       team1Id: team1.registrationId,
       team2Id: team2.registrationId,
       team1RoundPoints: -10,

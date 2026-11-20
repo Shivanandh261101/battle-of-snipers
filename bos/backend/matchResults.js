@@ -135,6 +135,11 @@ const matchResultsSchema = new mongoose.Schema(
       required: true,
       unique: true
     },
+    scheduledMatchId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "ScheduledMatch",
+  default: null
+},
     teams: {
       type: [teamScoreSchema],
       default: []

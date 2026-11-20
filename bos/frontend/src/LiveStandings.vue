@@ -86,12 +86,24 @@
       class="scheduled-team-logo"
     />
     <strong>{{ match.team1Name }}</strong>
+    <strong
+  v-if="match.result"
+  class="scheduled-team-score"
+>
+  {{ match.result.team1Score }}
+</strong>
   </div>
 
   <span class="scheduled-match-vs">VS</span>
 
   <div class="scheduled-team scheduled-team-right">
     <strong>{{ match.team2Name }}</strong>
+    <strong
+  v-if="match.result"
+  class="scheduled-team-score"
+>
+  {{ match.result.team2Score }}
+</strong>
     <img
       v-if="match.team2Id?.teamLogo"
       :src="match.team2Id.teamLogo"
@@ -3720,6 +3732,190 @@ try {
   .season7-match-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.scheduled-team-score {
+  color: #ffcc00;
+  font-size: 20px;
+  font-weight: 900;
+  margin-top: 5px;
+}
+@media (max-width: 480px) {
+  .scheduled-match-teams {
+    display: grid !important;
+    grid-template-columns:
+      20px minmax(0, 1fr) 15px 20px 15px minmax(0, 1fr) 20px;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    margin: 18px 0;
+  }
+
+  .scheduled-team {
+    display: contents !important;
+  }
+
+  .scheduled-team-left > img {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .scheduled-team-left > strong:not(.scheduled-team-score) {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: left;
+  }
+
+  .scheduled-team-left .scheduled-team-score {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .scheduled-match-vs {
+    grid-column: 4;
+    grid-row: 1;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .scheduled-team-right .scheduled-team-score {
+    grid-column: 5;
+    grid-row: 1;
+  }
+
+  .scheduled-team-right > strong:not(.scheduled-team-score) {
+    grid-column: 6;
+    grid-row: 1;
+    text-align: right;
+  }
+
+  .scheduled-team-right > img {
+    grid-column: 7;
+    grid-row: 1;
+  }
+
+  .scheduled-team-logo {
+    width: 20px;
+    height: 20px;
+  }
+
+  .scheduled-team-score {
+    font-size: 12px !important;
+    margin: 0 !important;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .scheduled-team strong:not(.scheduled-team-score) {
+    font-size: 10px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+}
+
+
+/* Responsive Match Teams and Scores */
+.scheduled-match-teams {
+  display: grid !important;
+  grid-template-columns:
+    clamp(18px, 5vw, 24px)
+    minmax(0, 1fr)
+    max-content
+    max-content
+    max-content
+    minmax(0, 1fr)
+    clamp(18px, 5vw, 24px) !important;
+
+  align-items: center;
+  justify-content: stretch;
+  gap: clamp(2px, 0.8vw, 6px);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 18px 0;
+}
+
+.scheduled-match-teams .scheduled-team {
+  display: contents !important;
+}
+
+/* Left Team Logo */
+.scheduled-match-teams .scheduled-team-left .scheduled-team-logo {
+  grid-column: 1;
+  grid-row: 1;
+  width: clamp(18px, 5vw, 24px);
+  height: clamp(18px, 5vw, 24px);
+  margin: 0;
+  object-fit: contain;
+}
+
+/* Left Team Name */
+.scheduled-match-teams .scheduled-team-left > strong:not(.scheduled-team-score) {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: left;
+}
+
+/* Left Score */
+.scheduled-match-teams .scheduled-team-left .scheduled-team-score {
+  grid-column: 3;
+  grid-row: 1;
+  text-align: center;
+}
+
+/* VS */
+.scheduled-match-teams .scheduled-match-vs {
+  grid-column: 4;
+  grid-row: 1;
+  text-align: center;
+  white-space: nowrap;
+  margin: 0;
+  font-size: clamp(11px, 3vw, 14px);
+}
+
+/* Right Score */
+.scheduled-match-teams .scheduled-team-right .scheduled-team-score {
+  grid-column: 5;
+  grid-row: 1;
+  text-align: center;
+}
+
+/* Right Team Name */
+.scheduled-match-teams .scheduled-team-right > strong:not(.scheduled-team-score) {
+  grid-column: 6;
+  grid-row: 1;
+  text-align: right;
+}
+
+/* Right Team Logo */
+.scheduled-match-teams .scheduled-team-right .scheduled-team-logo {
+  grid-column: 7;
+  grid-row: 1;
+  width: clamp(18px, 5vw, 24px);
+  height: clamp(18px, 5vw, 24px);
+  margin: 0;
+  object-fit: contain;
+}
+
+/* Team Names */
+.scheduled-match-teams .scheduled-team strong:not(.scheduled-team-score) {
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(8px, 2.7vw, 12px);
+  line-height: 1.2;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  margin: 0;
+}
+
+/* Scores */
+.scheduled-match-teams .scheduled-team-score {
+  font-size: clamp(10px, 3vw, 14px);
+  font-weight: 900;
+  color: #ffcc00;
+  white-space: nowrap;
+  margin: 0 !important;
+  padding: 0;
 }
 
 </style>

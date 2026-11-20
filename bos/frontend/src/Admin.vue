@@ -192,12 +192,38 @@
                 </div>
                 <button type="button" class="close-scheduled-matches-btn" @click="showScheduledMatches = false"> CLOSE </button>
               </div>
-            
-              <div class="scheduled-match-filters">
-                <button type="button" :class="{ active: scheduledMatchFilter === 'all' }" @click="scheduledMatchFilter = 'all'"> ALL MATCHES </button>
-                <button type="button" :class="{ active: scheduledMatchFilter === 'upcoming' }" @click="scheduledMatchFilter = 'upcoming'"> UPCOMING </button>
-                <button type="button" :class="{ active: scheduledMatchFilter === 'completed' }" @click="scheduledMatchFilter = 'completed'"> COMPLETED </button>
-              </div>
+              
+              <div class="scheduled-match-toolbar">
+
+  <div class="scheduled-match-filters">
+    <button type="button"
+      :class="{ active: scheduledMatchFilter === 'all' }"
+      @click="scheduledMatchFilter = 'all'">
+      ALL MATCHES
+    </button>
+
+    <button type="button"
+      :class="{ active: scheduledMatchFilter === 'upcoming' }"
+      @click="scheduledMatchFilter = 'upcoming'">
+      UPCOMING
+    </button>
+
+    <button type="button"
+      :class="{ active: scheduledMatchFilter === 'completed' }"
+      @click="scheduledMatchFilter = 'completed'">
+      COMPLETED
+    </button>
+  </div>
+
+  <div class="scheduled-match-search">
+    <input
+      type="text"
+      v-model="scheduledMatchSearch"
+      placeholder="Search team..."
+    />
+  </div>
+
+</div>
               
               <div v-if="filteredScheduledMatches.length === 0" class="scheduled-match-empty">
                 No scheduled matches found.
@@ -543,6 +569,7 @@ export default {
       scheduleSaving: false,
       showScheduledMatches: false,
       scheduledMatchFilter: "all",
+      scheduledMatchSearch: "",
       scheduledMatches: [],
       currentTime: Date.now(),
       scheduledMatchesTimer: null,
@@ -666,23 +693,33 @@ qualifierOptions() {
     (_, index) => index + 1
   );
 }, 
-    filteredScheduledMatches() {
-      const now = this.currentTime;
+filteredScheduledMatches() {
+  const now = this.currentTime;
+  const search = this.scheduledMatchSearch.trim().toLowerCase();
 
-      if (this.scheduledMatchFilter === "upcoming") {
-        return this.scheduledMatches.filter(
-          match => new Date(match.matchDate).getTime() > now
-        );
-      }
+  let matches = this.scheduledMatches;
 
-      if (this.scheduledMatchFilter === "completed") {
-        return this.scheduledMatches.filter(
-          match => new Date(match.matchDate).getTime() <= now
-        );
-      }
+  if (this.scheduledMatchFilter === "upcoming") {
+    matches = matches.filter(
+      match => new Date(match.matchDate).getTime() > now
+    );
+  }
 
-      return this.scheduledMatches;
-    }
+  if (this.scheduledMatchFilter === "completed") {
+    matches = matches.filter(
+      match => new Date(match.matchDate).getTime() <= now
+    );
+  }
+
+  if (search) {
+    matches = matches.filter(match =>
+      (match.team1Name || "").toLowerCase().includes(search) ||
+      (match.team2Name || "").toLowerCase().includes(search)
+    );
+  }
+
+  return matches;
+}
   },
 
   mounted() {
@@ -3038,12 +3075,54 @@ select option {
   color: #e9bd58;
 }
 
+.scheduled-match-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 0;
+}
+
+.scheduled-match-search {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.scheduled-match-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid #30323b;
+  border-radius: 10px;
+  background: #17181f;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+}
+
+.scheduled-match-search input:focus {
+  border-color: #e9bd58;
+}
+
+.scheduled-match-search input::placeholder {
+  color: #9699a6;
+}
+
+@media (max-width: 650px) {
+  .scheduled-match-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .scheduled-match-search {
+    width: 100%;
+  }
+}
 /* Filters */
 .scheduled-matches-overlay .scheduled-match-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 22px 0;
+  padding: 0;
 }
 
 .scheduled-matches-overlay .scheduled-match-filters button {
@@ -3249,6 +3328,24 @@ select option {
 .schedule-match-form select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .scheduled-matches-overlay .scheduled-match-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    align-items: center;
+  }
+
+  .scheduled-matches-overlay .scheduled-match-filters button {
+    flex: 0 0 auto;
+    padding: 8px 9px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
 }
 
 </style>
