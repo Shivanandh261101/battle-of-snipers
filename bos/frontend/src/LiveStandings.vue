@@ -141,7 +141,55 @@
         </div>
 
         <div class="points-section">
-          <h3>LIVE POINTS TABLE</h3>
+          <div class="points-toolbar">
+            <h3>LIVE POINTS TABLE</h3>
+            <div class="download-wrapper" ref="downloadWrapper">
+              <button
+                type="button"
+                class="download-trigger download-icon-only"
+                :disabled="downloadDisabled"
+                aria-haspopup="menu"
+                :aria-expanded="downloadMenuOpen ? 'true' : 'false'"
+                :aria-label="downloadPreparing ? 'Preparing points table download' : 'Download Points Table'"
+                :title="downloadPreparing ? 'Preparing…' : 'Download Points Table'"
+                @click="toggleDownloadMenu"
+              >
+                <svg
+                  class="download-icon"
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M12 3v12" />
+                  <path d="m7 10 5 5 5-5" />
+                  <path d="M5 21h14" />
+                </svg>
+              </button>
+
+              <div v-if="downloadMenuOpen" class="download-menu" role="menu">
+                <button
+                  v-for="option in downloadOptions"
+                  :key="option.scope"
+                  type="button"
+                  role="menuitem"
+                  class="download-option"
+                  :disabled="option.disabled"
+                  @click="selectDownloadScope(option.scope)"
+                >
+                  <span class="download-option-label">{{ option.label }}</span>
+                  <span class="download-option-sub">{{ option.subtitle }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <p v-if="downloadError" class="download-error">{{ downloadError }}</p>
           <p v-if="pointsError" class="error-message">{{ pointsError }}</p>
           <div v-for="groupName in ['A', 'B']" :key="groupName" class="points-group">
             <h4>GROUP {{ groupName }}</h4>
@@ -1081,10 +1129,135 @@
         </div>
       </div>
     </section>
+
+    <!-- Off-screen poster used only for JPG export -->
+    <div
+      v-if="downloadPosterGroups.length"
+      ref="posterRef"
+      class="points-export-poster"
+      :class="{
+        'is-single': downloadPosterGroups.length === 1,
+        'is-both': downloadPosterGroups.length === 2
+      }"
+    >
+      <div class="poster-top-accent"></div>
+
+      <div class="poster-header">
+        <img :src="posterLogo" alt="" class="poster-logo" />
+        <div class="poster-title-block">
+          <div class="poster-kicker">BATTLE OF SNIPERS</div>
+          <div class="poster-title">SEASON 7 · POINTS TABLE</div>
+          <div class="poster-subtitle">{{ downloadScopeLabel }}</div>
+        </div>
+        <div class="poster-stamp">
+          <span>OFFICIAL</span>
+          <span>LIVE STANDINGS</span>
+        </div>
+      </div>
+
+      <div class="poster-groups">
+        <section
+          v-for="group in downloadPosterGroups"
+          :key="group.name"
+          class="poster-group-card"
+        >
+          <div class="poster-group-header">
+            <span class="poster-group-badge">GROUP {{ group.name }}</span>
+            <span class="poster-group-count">{{ group.teams.length }} TEAMS</span>
+          </div>
+
+          <table class="poster-table">
+            <colgroup>
+              <col class="poster-col-rank" />
+              <col class="poster-col-team" />
+              <col class="poster-col-stat" />
+              <col class="poster-col-stat" />
+              <col class="poster-col-stat" />
+              <col class="poster-col-rp" />
+              <col class="poster-col-total" />
+              <col class="poster-col-status" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="poster-col-rank">#</th>
+                <th class="poster-col-team">TEAM</th>
+                <th class="poster-col-stat">P</th>
+                <th class="poster-col-stat">W</th>
+                <th class="poster-col-stat">L</th>
+                <th class="poster-col-rp">RP</th>
+                <th class="poster-col-total">TP</th>
+                <th class="poster-col-status">ST</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(team, index) in group.teams"
+                :key="team._id || team.registrationId || index"
+                :class="[
+                  index === 0 ? 'poster-row-gold' : index === 1 ? 'poster-row-silver' : index === 2 ? 'poster-row-bronze' : '',
+                  team.qualificationStatus === 'Q' ? 'poster-row-qualified' : team.qualificationStatus === 'E' ? 'poster-row-eliminated' : ''
+                ]"
+              >
+                <td class="poster-col-rank">
+                  <span
+                    class="poster-rank-chip"
+                    :class="index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : ''"
+                  >{{ index + 1 }}</span>
+                </td>
+                <td class="poster-col-team">
+                  <div class="poster-team-cell">
+                    <img
+                      v-if="team.teamLogo"
+                      :src="team.teamLogo"
+                      alt=""
+                      crossorigin="anonymous"
+                      class="poster-team-logo"
+                    />
+                    <span v-else class="poster-no-logo">—</span>
+                    <span class="poster-team-name">{{ team.teamName }}</span>
+                  </div>
+                </td>
+                <td class="poster-col-stat">{{ getPosterPlayed(team) }}</td>
+                <td class="poster-col-stat">{{ team.won || 0 }}</td>
+                <td class="poster-col-stat">{{ team.lost || 0 }}</td>
+                <td class="poster-col-rp">{{ team.roundsPoints || 0 }}</td>
+                <td class="poster-col-total">
+                  <span class="poster-total-pill">{{ team.totalPoints || 0 }}</span>
+                </td>
+                <td class="poster-col-status">
+                  <span v-if="team.qualificationStatus === 'Q'" class="poster-status poster-status-q">Q</span>
+                  <span v-else-if="team.qualificationStatus === 'E'" class="poster-status poster-status-e">E</span>
+                  <span v-else-if="team.rankChange > 0" class="poster-status poster-status-up">↑ {{ team.rankChange }}</span>
+                  <span v-else-if="team.rankChange < 0" class="poster-status poster-status-down">↓ {{ -team.rankChange }}</span>
+                  <span v-else class="poster-status poster-status-none">—</span>
+                </td>
+              </tr>
+              <tr v-if="isQualificationCut(group, index)" class="poster-cut-row">
+                <td colspan="8">
+                  <span>QUALIFICATION CUT-OFF · TOP {{ index + 1 }} ADVANCE</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="poster-qual-note">
+            <span class="poster-qual-dot"></span> Q = Qualified
+            <span class="poster-elim-dot"></span> E = Eliminated
+          </div>
+        </section>
+      </div>
+
+      <div class="poster-footer">
+        <span>BATTLE OF SNIPERS · OFFICIAL TOURNAMENT STANDINGS</span>
+        <span>{{ posterGeneratedAt }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
+import posterLogo from "./images/img1.png";
+
 const API_BASE_URL = "https://battle-of-snipers.onrender.com";
 export default {
   name: "LiveStandings",
@@ -1113,6 +1286,12 @@ export default {
       pointsLoading: false,
       pointsError: "",
       pointsInterval: null,
+      downloadMenuOpen: false,
+      downloadPreparing: false,
+      downloadPosterGroups: [],
+      downloadScopeLabel: "",
+      downloadError: "",
+      posterLogo,
       scheduledMatches: [],
       scheduledMatchesLoading: false,
       scheduledMatchesError: "",
@@ -1151,12 +1330,18 @@ season7PlayoffsError: ""
   } catch (error) {
     console.error("Unable to load remembered UID:", error);
   }
+
+  document.addEventListener("click", this.handleDocumentClick);
+  document.addEventListener("keydown", this.handleEscapeKey);
 },
 
   beforeUnmount() {
     if (this.pointsInterval) {
       clearInterval(this.pointsInterval);
     }
+
+    document.removeEventListener("click", this.handleDocumentClick);
+    document.removeEventListener("keydown", this.handleEscapeKey);
   },
 
   computed: {
@@ -1242,10 +1427,220 @@ season7PlayoffsError: ""
   return this.scheduledMatches.filter(
     match => new Date(match.matchDate).getTime() < now
   );
-}
-},
+  },
 
-  methods: {  
+  downloadOptions() {
+    const countA = this.pointsGroups.A?.length || 0;
+    const countB = this.pointsGroups.B?.length || 0;
+    const total = countA + countB;
+
+    return [
+      {
+        scope: "A",
+        label: "Group A",
+        subtitle: countA ? `${countA} teams` : "No teams yet",
+        disabled: countA === 0 || this.downloadPreparing
+      },
+      {
+        scope: "B",
+        label: "Group B",
+        subtitle: countB ? `${countB} teams` : "No teams yet",
+        disabled: countB === 0 || this.downloadPreparing
+      },
+      {
+        scope: "both",
+        label: "Both Groups",
+        subtitle: total ? `${total} teams · full table` : "No teams yet",
+        disabled: total === 0 || this.downloadPreparing
+      }
+    ];
+  },
+
+  downloadDisabled() {
+    const total =
+      (this.pointsGroups.A?.length || 0) +
+      (this.pointsGroups.B?.length || 0);
+
+    return this.downloadPreparing || total === 0;
+  },
+
+  posterGeneratedAt() {
+    return new Date().toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
+  },
+
+  methods: {
+
+    toggleDownloadMenu() {
+      this.downloadMenuOpen = !this.downloadMenuOpen;
+    },
+
+    closeDownloadMenu() {
+      this.downloadMenuOpen = false;
+    },
+
+    handleDocumentClick(event) {
+      if (!this.downloadMenuOpen) return;
+
+      const wrapper = this.$refs.downloadWrapper;
+      if (wrapper && !wrapper.contains(event.target)) {
+        this.downloadMenuOpen = false;
+      }
+    },
+
+    handleEscapeKey(event) {
+      if (event.key === "Escape" && this.downloadMenuOpen) {
+        this.downloadMenuOpen = false;
+      }
+    },
+
+    getPosterPlayed(team) {
+      return (team.won || 0) + (team.lost || 0);
+    },
+
+    isQualificationCut(group, index) {
+      const current = group.teams[index];
+      const next = group.teams[index + 1];
+
+      return (
+        current?.qualificationStatus === "Q" &&
+        Boolean(next) &&
+        next.qualificationStatus !== "Q"
+      );
+    },
+
+    getDownloadScopeLabel(scope) {
+      if (scope === "A") return "GROUP A · LIVE POINTS TABLE";
+      if (scope === "B") return "GROUP B · LIVE POINTS TABLE";
+      return "GROUPS A & B · LIVE POINTS TABLE";
+    },
+
+    buildPosterGroups(scope) {
+      const groups = [];
+
+      if (scope === "A" || scope === "both") {
+        groups.push({ name: "A", teams: this.pointsGroups.A || [] });
+      }
+      if (scope === "B" || scope === "both") {
+        groups.push({ name: "B", teams: this.pointsGroups.B || [] });
+      }
+
+      return groups;
+    },
+
+    async selectDownloadScope(scope) {
+      if (this.downloadPreparing) return;
+
+      const groups = this.buildPosterGroups(scope);
+      if (!groups.length || groups.every(group => !group.teams.length)) {
+        return;
+      }
+
+      this.downloadMenuOpen = false;
+      this.downloadError = "";
+      this.downloadPreparing = true;
+      this.downloadScopeLabel = this.getDownloadScopeLabel(scope);
+      this.downloadPosterGroups = groups;
+
+      try {
+        await this.$nextTick();
+        await this.waitForPosterImages();
+        const canvas = await this.capturePoster();
+        await this.triggerJpgDownload(canvas, scope);
+      } catch (error) {
+        console.error("Points table download failed:", error);
+        this.downloadError = "Could not create the image. Please try again.";
+      } finally {
+        this.downloadPreparing = false;
+        this.downloadPosterGroups = [];
+      }
+    },
+
+    async waitForPosterImages() {
+      const poster = this.$refs.posterRef;
+      if (!poster) return;
+
+      const images = Array.from(poster.querySelectorAll("img"));
+      const imagePromises = images.map(img => {
+        if (img.complete && img.naturalWidth > 0) {
+          return Promise.resolve();
+        }
+
+        return new Promise(resolve => {
+          const done = () => resolve();
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", done, { once: true });
+        });
+      });
+
+      const timeout = new Promise(resolve => setTimeout(resolve, 8000));
+      await Promise.race([Promise.all(imagePromises), timeout]);
+
+      await new Promise(resolve => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+    },
+
+    async capturePoster() {
+      const poster = this.$refs.posterRef;
+      if (!poster) {
+        throw new Error("Poster element is not ready.");
+      }
+
+      const { default: html2canvas } = await import("html2canvas");
+      const captureWidth = poster.offsetWidth;
+      const captureHeight = poster.offsetHeight;
+
+      return html2canvas(poster, {
+        backgroundColor: "#08080c",
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        windowWidth: Math.max(captureWidth + 120, window.innerWidth),
+        windowHeight: Math.max(captureHeight + 120, window.innerHeight),
+        width: captureWidth,
+        height: captureHeight,
+        scrollX: 0,
+        scrollY: 0,
+        imageTimeout: 10000
+      });
+    },
+
+    getDownloadFilename(scope) {
+      const date = new Date().toISOString().slice(0, 10);
+      const suffix =
+        scope === "A" ? "Group-A" : scope === "B" ? "Group-B" : "Both-Groups";
+
+      return `Battle-of-Snipers-Season7-${suffix}-Points-${date}.jpg`;
+    },
+
+    async triggerJpgDownload(canvas, scope) {
+      const blob = await new Promise(resolve => {
+        canvas.toBlob(resolve, "image/jpeg", 0.95);
+      });
+
+      if (!blob) {
+        throw new Error("Could not convert the poster to JPG.");
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = this.getDownloadFilename(scope);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+
     getSeasonColumns(season) {
       if (season?.standingsColumns?.length) {
         return season.standingsColumns;
@@ -1694,6 +2089,9 @@ try {
       this.playerName = "";
       this.teamName = "";
       this.playerGroup = null;
+      this.downloadMenuOpen = false;
+      this.downloadError = "";
+      this.downloadPosterGroups = [];
       this.scheduledMatches = [];
       this.scheduledMatchesLoading = false;
       this.scheduledMatchesError = "";
@@ -1884,7 +2282,7 @@ try {
   text-align: left;
 }
 
-.points-section > h3,
+.points-toolbar h3,
 .points-group h4 {
   color: #ffb000;
   text-align: center;
@@ -3918,4 +4316,620 @@ try {
   padding: 0;
 }
 
+/* ---------- Points table download ---------- */
+.points-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.points-toolbar h3 {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
+
+.download-wrapper {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.standings-card .download-trigger {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  flex: 0 0 42px !important;
+  width: 42px !important;
+  height: 42px !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255, 176, 0, 0.55) !important;
+  border-radius: 10px !important;
+  background: #17171e !important;
+  color: #ffb000 !important;
+  cursor: pointer !important;
+}
+
+.standings-card .download-trigger:hover:not(:disabled) {
+  background: #22222b !important;
+  border-color: #ffb000 !important;
+}
+
+.standings-card .download-trigger:focus-visible {
+  outline: 2px solid #ffb000 !important;
+  outline-offset: 2px !important;
+}
+
+.standings-card .download-trigger:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+.download-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.download-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 60;
+  min-width: 235px;
+  padding: 6px;
+  background: #17171e;
+  border: 1px solid #383844;
+  border-radius: 10px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+  text-align: left;
+}
+
+.standings-card .download-option {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  border: 0 !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  color: #fff !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.standings-card .download-option:hover:not(:disabled),
+.standings-card .download-option:focus-visible {
+  background: #24242e !important;
+  outline: none !important;
+}
+
+.standings-card .download-option:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.download-option-label {
+  display: block;
+  color: #ffb000;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.download-option-sub {
+  display: block;
+  margin-top: 3px;
+  color: #a9a9b5;
+  font-size: 11px;
+}
+
+.download-error {
+  margin-top: 8px;
+  color: #ff7777;
+  font-size: 12px;
+}
+
+/* ---------- Off-screen JPG poster ---------- */
+.points-export-poster {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 1500px;
+  box-sizing: border-box;
+  padding: 60px 70px 46px;
+  background: linear-gradient(160deg, #08080c 0%, #15151d 100%);
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+  text-align: left;
+}
+
+/* Both groups are captured on a wider canvas so the cards can sit side by side. */
+.points-export-poster.is-both {
+  width: 2400px;
+  padding: 68px 78px 52px;
+}
+
+.points-export-poster.is-both .poster-logo {
+  width: 140px;
+  height: 140px;
+  margin-right: 46px;
+}
+
+.points-export-poster.is-both .poster-kicker {
+  font-size: 26px;
+}
+
+.points-export-poster.is-both .poster-title {
+  margin-top: 12px;
+  font-size: 76px;
+}
+
+.points-export-poster.is-both .poster-subtitle {
+  font-size: 30px;
+}
+
+.points-export-poster.is-both .poster-stamp span:first-child {
+  font-size: 30px;
+}
+
+.points-export-poster.is-both .poster-stamp span:last-child {
+  font-size: 18px;
+}
+
+.points-export-poster.is-both .poster-groups {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;
+  margin-top: 52px;
+}
+
+.points-export-poster.is-both .poster-group-card {
+  width: calc(50% - 15px);
+  margin-bottom: 0;
+}
+
+.points-export-poster.is-both .poster-group-badge {
+  padding: 12px 28px;
+  font-size: 34px;
+}
+
+.points-export-poster.is-both .poster-group-count {
+  font-size: 20px;
+}
+
+.poster-top-accent {
+  height: 8px;
+  margin-bottom: 44px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #ffb000 0%, #ffd166 50%, #ffb000 100%);
+}
+
+.poster-header {
+  display: flex;
+  align-items: center;
+}
+
+.poster-logo {
+  width: 118px;
+  height: 118px;
+  margin-right: 38px;
+  padding: 16px;
+  box-sizing: border-box;
+  object-fit: contain;
+  border: 2px solid rgba(255, 176, 0, 0.55);
+  border-radius: 24px;
+  background: #17171e;
+}
+
+.poster-title-block {
+  flex: 1;
+}
+
+.poster-kicker {
+  color: #ffb000;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 6px;
+}
+
+.poster-title {
+  margin-top: 10px;
+  font-size: 60px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.poster-subtitle {
+  margin-top: 14px;
+  color: #cfcfd8;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.poster-stamp {
+  margin-left: 30px;
+  padding-left: 30px;
+  border-left: 2px solid rgba(255, 176, 0, 0.45);
+  text-align: right;
+}
+
+.poster-stamp span {
+  display: block;
+}
+
+.poster-stamp span:first-child {
+  color: #ffb000;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 3px;
+}
+
+.poster-stamp span:last-child {
+  margin-top: 6px;
+  color: #9d9daa;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.poster-groups {
+  margin-top: 44px;
+}
+
+.poster-group-card {
+  width: 100%;
+  margin-bottom: 42px;
+  padding: 30px 34px;
+  box-sizing: border-box;
+  border: 1px solid #383844;
+  border-top: 4px solid #ffb000;
+  border-radius: 18px;
+  background: #111117;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.poster-group-card:last-child {
+  margin-bottom: 0;
+}
+
+.points-export-poster.is-single .poster-group-card {
+  margin-bottom: 0;
+}
+
+.poster-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #383844;
+}
+
+.poster-group-badge {
+  padding: 11px 26px;
+  border-radius: 8px;
+  background: #ffb000;
+  color: #0b0b0f;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.poster-group-count {
+  color: #b9b9c4;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.poster-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.poster-table col.poster-col-rank {
+  width: 90px;
+}
+
+.poster-table col.poster-col-team {
+  width: auto;
+}
+
+.poster-table col.poster-col-stat {
+  width: 92px;
+}
+
+.poster-table col.poster-col-rp {
+  width: 125px;
+}
+
+.poster-table col.poster-col-total {
+  width: 130px;
+}
+
+.poster-table col.poster-col-status {
+  width: 140px;
+}
+
+.poster-table th {
+  padding: 16px 8px;
+  background: #1d1d26;
+  border-bottom: 2px solid #ffb000;
+  color: #ffb000;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-align: center;
+}
+
+.poster-table td {
+  height: 68px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  border-bottom: 1px solid #2c2c36;
+  color: #f2f2f5;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.poster-table tbody tr:not(.poster-cut-row):nth-child(even) td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.poster-table th.poster-col-rank,
+.poster-table td.poster-col-rank {
+  width: 90px;
+}
+
+.poster-table th.poster-col-team,
+.poster-table td.poster-col-team {
+  width: auto;
+}
+
+.poster-table th.poster-col-stat,
+.poster-table td.poster-col-stat {
+  width: 92px;
+}
+
+.poster-table th.poster-col-rp,
+.poster-table td.poster-col-rp {
+  width: 125px;
+}
+
+.poster-table th.poster-col-total,
+.poster-table td.poster-col-total {
+  width: 130px;
+}
+
+.poster-table th.poster-col-status,
+.poster-table td.poster-col-status {
+  width: 140px;
+}
+
+.poster-table td.poster-col-team {
+  text-align: left;
+}
+
+.poster-cut-row td {
+  height: 48px;
+  padding: 0;
+  border-bottom: 2px solid #ffb000;
+  background: #1a1a22;
+  color: #ffb000;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.poster-team-cell {
+  display: flex;
+  align-items: center;
+}
+
+.poster-team-logo {
+  width: 56px;
+  height: 56px;
+  margin-right: 20px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 3px solid #ffb000;
+  border-radius: 50%;
+  background: #0e0e13;
+  box-shadow: 0 0 0 4px rgba(255, 176, 0, 0.08);
+}
+
+.poster-no-logo {
+  width: 56px;
+  margin-right: 20px;
+  color: #7b7b88;
+  text-align: center;
+}
+
+.poster-team-name {
+  overflow: hidden;
+  font-size: 23px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poster-rank-chip {
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #383844;
+  border-radius: 50%;
+  background: #23232c;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.poster-rank-chip.rank-1 {
+  border-color: #ffd76a;
+  background: linear-gradient(180deg, #ffd76a, #ffb000);
+  color: #0b0b0f;
+}
+
+.poster-rank-chip.rank-2 {
+  border-color: #e5e7eb;
+  background: linear-gradient(180deg, #e5e7eb, #9ca3af);
+  color: #0b0b0f;
+}
+
+.poster-rank-chip.rank-3 {
+  border-color: #f0a46a;
+  background: linear-gradient(180deg, #f0a46a, #b45309);
+  color: #fff;
+}
+
+.poster-row-gold td {
+  background: rgba(255, 176, 0, 0.07);
+}
+
+.poster-row-silver td {
+  background: rgba(229, 231, 235, 0.05);
+}
+
+.poster-row-bronze td {
+  background: rgba(180, 83, 9, 0.07);
+}
+
+.poster-row-qualified td:first-child {
+  box-shadow: inset 6px 0 0 #22c55e;
+}
+
+.poster-row-eliminated {
+  opacity: 0.72;
+}
+
+.poster-row-eliminated td:first-child {
+  box-shadow: inset 6px 0 0 #ef4444;
+}
+
+.poster-total-pill {
+  display: inline-block;
+  min-width: 66px;
+  padding: 7px 12px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 176, 0, 0.5);
+  border-radius: 999px;
+  background: rgba(255, 176, 0, 0.14);
+  color: #ffb000;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.poster-status {
+  display: inline-block;
+  min-width: 62px;
+  padding: 7px 12px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  font-size: 19px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.poster-status-q {
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.14);
+  color: #22c55e;
+}
+
+.poster-status-e {
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.14);
+  color: #ef4444;
+}
+
+.poster-status-up {
+  color: #22c55e;
+}
+
+.poster-status-down {
+  color: #ef4444;
+}
+
+.poster-status-none {
+  color: #7b7b88;
+}
+
+.poster-qual-note {
+  margin-top: 18px;
+  color: #9a9aa6;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.poster-qual-dot,
+.poster-elim-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin: 0 6px 0 18px;
+  border-radius: 50%;
+}
+
+.poster-qual-dot {
+  background: #22c55e;
+}
+
+.poster-elim-dot {
+  background: #ef4444;
+}
+
+.poster-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 42px;
+  padding-top: 24px;
+  border-top: 1px solid #383844;
+  color: #8a8a96;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 600px) {
+  .points-toolbar {
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 0 50px;
+  }
+
+  .points-toolbar h3 {
+    font-size: 15px;
+  }
+
+  .download-wrapper {
+    position: absolute;
+    right: 0;
+    top: 0;
+    margin-top: 0;
+  }
+
+  .download-menu {
+    right: 0;
+    transform: none;
+    min-width: 220px;
+  }
+}
 </style>

@@ -997,6 +997,67 @@ app.put("/api/admin/registrations/:id/group", verifyAdmin, async (req, res) => {
   }
 });
 
+// ADMIN: Edit the four editable registration detail fields
+app.put("/api/admin/registrations/:id", verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ffUid, ffName, teamName, contactNumber } = req.body || {};
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid registration ID." });
+    }
+
+    const details = {
+      ffUid: String(ffUid || "").trim(),
+      ffName: String(ffName || "").trim(),
+      teamName: String(teamName || "").trim(),
+      contactNumber: String(contactNumber || "").trim()
+    };
+
+    if (!details.ffUid || !details.ffName || !details.teamName || !details.contactNumber) {
+      return res.status(400).json({
+        message: "FF UID, FF Name, Team Name and Contact Number are all required."
+      });
+    }
+
+    if (!/^[0-9]+$/.test(details.ffUid)) {
+      return res.status(400).json({ message: "FF UID must contain numbers only." });
+    }
+
+    if (!/^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$/.test(details.teamName)) {
+      return res.status(400).json({
+        message: "Team Name can contain letters, numbers, and single spaces only."
+      });
+    }
+
+    if (!/^[0-9]{10}$/.test(details.contactNumber)) {
+      return res.status(400).json({
+        message: "Contact / WhatsApp Number must be exactly 10 digits."
+      });
+    }
+
+    const registration = await Registration.findByIdAndUpdate(
+      id,
+      { $set: details },
+      { new: true, runValidators: true }
+    ).select("_id ffUid ffName teamName contactNumber group teamLogo registeredAt");
+
+    if (!registration) {
+      return res.status(404).json({ message: "Registration not found." });
+    }
+
+    return res.json({
+      message: "Registration details updated successfully.",
+      registration
+    });
+  } catch (error) {
+    console.error("Updating registration failed:", error.message);
+    return res.status(500).json({
+      message: "Could not update the registration."
+    });
+  }
+});
+
 // PUBLIC: Read-only group lists for the standings page
 app.get("/api/standings/teams", async (req, res) => {
   try {

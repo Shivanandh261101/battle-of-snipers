@@ -5,7 +5,7 @@
 
     <header class="topbar">
       <div class="brand">
-        <span class="brand-icon">BOS</span>
+        <img :src="adminLogo" alt="Battle of Snipers logo" class="brand-icon" />
         <div>
           <h2>BATTLE OF SNIPERS</h2>
           <p>SEASON 7 · ADMIN PANEL</p>
@@ -408,6 +408,7 @@
             aria-label="Search registrations"
           />
         </div>
+<p v-if="registrationEditMessage" class="success-message">{{ registrationEditMessage }}</p>
 <p v-if="groupError" class="error-message dashboard-error">
   {{ groupError }}
 </p>
@@ -491,9 +492,23 @@
                 <td>{{ formatDate(registration.registeredAt) }}</td>
 
                 <td>
-                    <button class="delete-btn" type="button" :disabled="deletingId === registration._id" @click="deleteRegistration(registration)" >
-                        {{ deletingId === registration._id ? "Deleting..." : "Delete" }} 
+                  <div class="registration-actions">
+                    <button
+                      class="edit-registration-btn"
+                      type="button"
+                      @click="openRegistrationEdit(registration)"
+                    >
+                      EDIT
                     </button>
+                    <button
+                      class="delete-btn"
+                      type="button"
+                      :disabled="deletingId === registration._id"
+                      @click="deleteRegistration(registration)"
+                    >
+                      {{ deletingId === registration._id ? "Deleting..." : "Delete" }}
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -510,10 +525,101 @@
         BATTLE OF SNIPERS · SEASON 7 · ADMIN CONTROL CENTER
       </p>
     </main>
+
+    <div
+      v-if="editingRegistrationId"
+      class="registration-edit-overlay"
+      @click.self="closeRegistrationEdit"
+    >
+      <section
+        class="registration-edit-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="registrationEditTitle"
+      >
+        <div class="registration-edit-header">
+          <div>
+            <span class="registration-edit-eyebrow">REGISTRATION CONTROL</span>
+            <h3 id="registrationEditTitle">Edit Registration</h3>
+            <p>Only the four fields below can be changed.</p>
+          </div>
+          <button
+            type="button"
+            class="registration-edit-close"
+            @click="closeRegistrationEdit"
+          >
+            CLOSE
+          </button>
+        </div>
+
+        <p v-if="registrationEditError" class="error-message">
+          {{ registrationEditError }}
+        </p>
+
+        <form @submit.prevent="saveRegistrationEdits">
+          <label for="editFfUid">Free Fire UID</label>
+          <input
+            id="editFfUid"
+            v-model.trim="editRegistrationFfUid"
+            type="text"
+            inputmode="numeric"
+            maxlength="20"
+            required
+          />
+
+          <label for="editFfName">Free Fire Name</label>
+          <input
+            id="editFfName"
+            v-model.trim="editRegistrationFfName"
+            type="text"
+            maxlength="40"
+            required
+          />
+
+          <label for="editTeamName">Team Name</label>
+          <input
+            id="editTeamName"
+            v-model.trim="editRegistrationTeamName"
+            type="text"
+            maxlength="60"
+            required
+          />
+
+          <label for="editContactNumber">Contact Number</label>
+          <input
+            id="editContactNumber"
+            v-model.trim="editRegistrationContact"
+            type="text"
+            inputmode="numeric"
+            maxlength="10"
+            required
+          />
+
+          <div class="registration-edit-actions">
+            <button
+              type="button"
+              class="registration-edit-cancel"
+              @click="closeRegistrationEdit"
+            >
+              CANCEL
+            </button>
+            <button
+              type="submit"
+              class="primary-btn"
+              :disabled="savingRegistrationEdit"
+            >
+              {{ savingRegistrationEdit ? "SAVING..." : "SAVE CHANGES" }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   </div>
 </template>
 
 <script>
+import adminLogo from "./images/img1.png";
+
 export default {
   name: "TournamentAdmin",
 
@@ -521,6 +627,7 @@ export default {
 
   data() {
     return {
+      adminLogo,
       username: "",
       password: "",
       token: "",
@@ -533,6 +640,14 @@ export default {
       searchQuery: "",
       deletingId: null,
       savingGroupId: null,
+      editingRegistrationId: "",
+      editRegistrationFfUid: "",
+      editRegistrationFfName: "",
+      editRegistrationTeamName: "",
+      editRegistrationContact: "",
+      savingRegistrationEdit: false,
+      registrationEditError: "",
+      registrationEditMessage: "",
       groupError: "",
       registrationOpen: false,
       tournamentStarted: false,
@@ -1412,6 +1527,107 @@ async saveTeamGroup(registration, selectedGroup) {
   }
 },
 
+openRegistrationEdit(registration) {
+  this.editingRegistrationId = registration._id;
+  this.editRegistrationFfUid = registration.ffUid || "";
+  this.editRegistrationFfName = registration.ffName || "";
+  this.editRegistrationTeamName = registration.teamName || "";
+  this.editRegistrationContact = registration.contactNumber || "";
+  this.registrationEditError = "";
+  this.registrationEditMessage = "";
+},
+
+closeRegistrationEdit() {
+  this.editingRegistrationId = "";
+  this.editRegistrationFfUid = "";
+  this.editRegistrationFfName = "";
+  this.editRegistrationTeamName = "";
+  this.editRegistrationContact = "";
+  this.savingRegistrationEdit = false;
+  this.registrationEditError = "";
+},
+
+async saveRegistrationEdits() {
+  if (this.savingRegistrationEdit || !this.editingRegistrationId) return;
+
+  const ffUid = this.editRegistrationFfUid.trim();
+  const ffName = this.editRegistrationFfName.trim();
+  const teamName = this.editRegistrationTeamName.trim();
+  const contactNumber = this.editRegistrationContact.trim();
+
+  if (!ffUid || !ffName || !teamName || !contactNumber) {
+    this.registrationEditError = "All four fields are required.";
+    return;
+  }
+
+  if (!/^[0-9]+$/.test(ffUid)) {
+    this.registrationEditError = "FF UID must contain numbers only.";
+    return;
+  }
+
+  if (!/^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$/.test(teamName)) {
+    this.registrationEditError =
+      "Team Name can contain letters, numbers, and single spaces only.";
+    return;
+  }
+
+  if (!/^[0-9]{10}$/.test(contactNumber)) {
+    this.registrationEditError =
+      "Contact / WhatsApp Number must be exactly 10 digits.";
+    return;
+  }
+
+  this.savingRegistrationEdit = true;
+  this.registrationEditError = "";
+
+  try {
+    const response = await fetch(
+      `https://battle-of-snipers.onrender.com/api/admin/registrations/${encodeURIComponent(this.editingRegistrationId)}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + this.token
+        },
+        body: JSON.stringify({ ffUid, ffName, teamName, contactNumber })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        this.logout();
+        this.errorMessage = data.message || "Please log in again.";
+        this.closeRegistrationEdit();
+        return;
+      }
+
+      throw new Error(data.message || "Could not update registration.");
+    }
+
+    const index = this.registrations.findIndex(
+      item => String(item._id) === String(this.editingRegistrationId)
+    );
+
+    if (index !== -1) {
+      this.registrations[index] = {
+        ...this.registrations[index],
+        ...data.registration
+      };
+    }
+
+    this.registrationEditMessage =
+      `${data.registration.teamName} details updated successfully.`;
+    this.closeRegistrationEdit();
+  } catch (error) {
+    this.registrationEditError =
+      error.message || "Could not update registration.";
+  } finally {
+    this.savingRegistrationEdit = false;
+  }
+},
+
 
 resetMatchSelection() {
   this.winnerId = "";
@@ -1716,15 +1932,16 @@ async deleteRegistration(registration) {
 }
 
 .brand-icon {
-  display: grid;
-  place-items: center;
+  display: block;
+  flex: 0 0 48px;
   width: 48px;
   height: 48px;
+  padding: 4px;
+  box-sizing: border-box;
+  object-fit: contain;
   border: 1px solid #cda64d;
   border-radius: 12px;
-  color: #f0c96a;
-  font-weight: 900;
-  letter-spacing: 1px;
+  background: #0e0e13;
 }
 
 .brand h2 {
@@ -2319,6 +2536,8 @@ tbody tr:hover {
 
   .brand-icon {
     flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
   }
 
   .brand h2 {
@@ -2768,7 +2987,7 @@ select option {
 /* Actions */
 .table-scroll th:nth-child(8),
 .table-scroll td:nth-child(8) {
-  width: 8%;
+  width: 16%;
 }
 
 /* Group dropdown */
@@ -3345,6 +3564,215 @@ select option {
     padding: 8px 9px;
     font-size: 9px;
     white-space: nowrap;
+  }
+}
+
+/* ===== Registration detail editing ===== */
+
+.success-message {
+  margin: 12px 0 18px;
+  padding: 12px 16px;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.registration-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.table-scroll .edit-registration-btn {
+  padding: 7px 8px;
+  min-width: 0;
+  border: 1px solid #c99b32;
+  border-radius: 7px;
+  background: #2e2410;
+  color: #f0c75e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.table-scroll .edit-registration-btn:hover {
+  background: #f0c75e;
+  color: #111111;
+}
+
+.table-scroll .edit-registration-btn:focus-visible,
+.table-scroll .delete-btn:focus-visible {
+  outline: 2px solid #f0c75e;
+  outline-offset: 2px;
+}
+
+.registration-edit-overlay {
+  position: fixed;
+  z-index: 2000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.registration-edit-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 30px;
+  box-sizing: border-box;
+  border: 1px solid rgba(240, 199, 94, 0.35);
+  border-top: 4px solid #f0c75e;
+  border-radius: 14px;
+  background: #17171e;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+}
+
+.registration-edit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #34343f;
+}
+
+.registration-edit-eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: #f0c75e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.registration-edit-header h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 24px;
+  letter-spacing: 0.5px;
+}
+
+.registration-edit-header p {
+  margin: 8px 0 0;
+  color: #a8a8b3;
+  font-size: 13px;
+}
+
+.registration-edit-close {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid #4a4a57;
+  border-radius: 7px;
+  background: #23232c;
+  color: #d8d8df;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.registration-edit-close:hover {
+  border-color: #f0c75e;
+  color: #f0c75e;
+}
+
+.registration-edit-panel form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.registration-edit-panel form > label {
+  grid-column: 1 / -1;
+  margin-bottom: -8px;
+  color: #f0c75e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.registration-edit-panel form > label + input {
+  margin-bottom: 8px;
+}
+
+.registration-edit-panel input {
+  width: 100%;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border: 1px solid #3c3c48;
+  border-radius: 8px;
+  outline: none;
+  background: #0e0e13;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.registration-edit-panel input:focus {
+  border-color: #f0c75e;
+  box-shadow: 0 0 0 3px rgba(240, 199, 94, 0.12);
+}
+
+.registration-edit-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 20px;
+  border-top: 1px solid #34343f;
+}
+
+.registration-edit-cancel {
+  padding: 11px 18px;
+  border: 1px solid #4a4a57;
+  border-radius: 8px;
+  background: #23232c;
+  color: #d8d8df;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.registration-edit-cancel:hover {
+  border-color: #f0c75e;
+  color: #f0c75e;
+}
+
+@media (max-width: 760px) {
+  .table-scroll .edit-registration-btn,
+  .table-scroll .delete-btn {
+    padding: 6px 3px;
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+
+  .registration-actions {
+    gap: 3px;
+  }
+
+  .registration-edit-overlay {
+    padding: 12px;
+  }
+
+  .registration-edit-panel {
+    padding: 22px 18px;
+  }
+
+  .registration-edit-panel form {
+    grid-template-columns: 1fr;
   }
 }
 
